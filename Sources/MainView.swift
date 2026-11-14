@@ -538,7 +538,7 @@ extension Notification.Name {
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
             }
         }
-        Task.detached(priority: .userInitiated) { [weak self] in
+        Task.detached(priority: .userInitiated) { [progressStore] in
             do {
                 let isFolder = (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
                 if isFolder {
@@ -562,23 +562,23 @@ extension Notification.Name {
                     }
                 }
                 await MainActor.run {
-                    self?.diagnostic = ""
-                    self?.status = "Prepared \(output.lastPathComponent)"
-                    self?.busy = false
-                    self?.extracting = false
-                    self?.refresh()
+                    progressStore.diagnostic = ""
+                    progressStore.status = "Prepared \(output.lastPathComponent)"
+                    progressStore.busy = false
+                    progressStore.extracting = false
+                    progressStore.refresh()
                     if !isFolder {
-                        self?.extractedArchiveAwaitingDecision = url
+                        progressStore.extractedArchiveAwaitingDecision = url
                     }
                 }
             } catch {
                 let details = ArchiveDiagnostics.describe(url) + (url.pathExtension.lowercased() == "zip" ? "\n" + ZIPStructureCheck.inspect(url) + "\n" + ZIPEntryReport.inspect(url) : "")
                 try? FileManager.default.removeItem(at: output)
                 await MainActor.run {
-                    self?.diagnostic = details
-                    self?.status = "Extraction failed (\(url.pathExtension.uppercased())): \(error.localizedDescription)"
-                    self?.busy = false
-                    self?.extracting = false
+                    progressStore.diagnostic = details
+                    progressStore.status = "Extraction failed (\(url.pathExtension.uppercased())): \(error.localizedDescription)"
+                    progressStore.busy = false
+                    progressStore.extracting = false
                 }
             }
         }
@@ -1506,7 +1506,7 @@ struct GameDetailView: View {
                         }
                     }
                 }
-                if let launchPlan {
+                if launchPlan != nil {
                     madeiraEditSection
                 }
                 Section("Windows executables — suggested order") {
