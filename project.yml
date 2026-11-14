@@ -1,0 +1,35 @@
+name: AnkerGameBridge
+options:
+  bundleIdPrefix: com.ankergamebridge
+settings:
+  base:
+    SWIFT_VERSION: '5.9'
+    IPHONEOS_DEPLOYMENT_TARGET: '16.0'
+targets:
+  AnkerGameBridge:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ankergamebridge.app
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Anker Game Downloader
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_UIFileSharingEnabled: YES
+        INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: YES
+    dependencies:
+      - package: LibArchive
+      - package: ZIPFoundation
+      - package: Zstandard
+        product: zstd
+packages:
+  Zstandard:
+    url: https://github.com/awxkee/zstd.swift.git
+    branch: master
+  LibArchive:
+    url: https://github.com/kmworks/libarchive-swift.git
+    from: 0.1.6
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation.git
+    from: 0.9.19
