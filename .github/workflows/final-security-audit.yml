@@ -1,0 +1,49 @@
+name: Anker final binary provenance and archive security audit
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact native source provenance and binary checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          curl -fL --retry 3 -o audit/CArchive.xcframework.zip https://github.com/kmworks/libarchive-swift/releases/download/0.1.11/CArchive.xcframework.zip
+          echo 'beb32c2ff5d781dadc7f6875fdd8237606f52028a3b9a3690a057da856f161f3  audit/CArchive.xcframework.zip' | shasum -a 256 -c -
+          curl -fL --retry 3 -o audit/libarchive-3.8.7.tar.xz https://github.com/libarchive/libarchive/releases/download/v3.8.7/libarchive-3.8.7.tar.xz
+          echo 'd3a8ba457ae25c27c84fd2830a2efdcc5b1d40bf585d4eb0d35f47e99e5d4774  audit/libarchive-3.8.7.tar.xz' | shasum -a 256 -c -
+          unzip -q audit/CArchive.xcframework.zip -d audit
+          find audit -name '*.a' -type f -print -exec file {} \; -exec shasum -a 256 {} \; > audit/native-static-libraries.txt
+          test -s audit/native-static-libraries.txt
+          git clone --quiet https://github.com/awxkee/zstd.swift.git audit/zstd-swift
+          git -C audit/zstd-swift checkout --quiet 475fe31
+          test "$(git -C audit/zstd-swift rev-parse --short=7 HEAD)" = 475fe31
+          find audit/zstd-swift/Sources/libzstd -name '*.a' -type f -print -exec file {} \; -exec shasum -a 256 {} \; >> audit/native-static-libraries.txt
+          grep -q 'libzstd.a' audit/native-static-libraries.txt
+          cat audit/native-static-libraries.txt
+      - name: Verify required redistribution notices
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in LICENSE LICENSES/ZIPFOUNDATION_MIT_0.9.20.txt LICENSES/LIBARCHIVE_SWIFT_BSD_2_CLAUSE.txt LICENSES/LIBARCHIVE_BINARY_COPYING.txt LICENSES/ZSTD_SWIFT_CC0_1.0.txt LICENSES/ZSTANDARD_NATIVE_BSD_3_CLAUSE.txt; do test -s "$f"; done
+          grep -q 'Copyright' LICENSES/LIBARCHIVE_BINARY_COPYING.txt
+          grep -q 'Redistribution' LICENSES/ZSTANDARD_NATIVE_BSD_3_CLAUSE.txt
+      - name: Check unsafe archive behavior in actual libarchive wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --quiet --branch 0.1.11 --depth 1 https://github.com/kmworks/libarchive-swift.git audit/libarchive-swift
+          cd audit/libarchive-swift
+          swift test --parallel
+      - name: Archive audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anker-native-provenance-audit
+          path: audit/native-static-libraries.txt
+          if-no-files-found: warn
