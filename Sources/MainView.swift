@@ -681,6 +681,27 @@ struct MainView: View {
         customWebsiteURL = candidate
         customNavigationVersion += 1
     }
+    private var coffeeButton: some View {
+        Group {
+            if let donationURL = AnkerSupport.donationURL {
+                Link(destination: donationURL) {
+                    HStack(spacing: 7) {
+                        Image(systemName: "cup.and.saucer.fill")
+                            .foregroundStyle(.orange)
+                        Text("Buy Me a Coffee")
+                            .font(.subheadline.weight(.semibold))
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+                    .background(.orange.opacity(0.12), in: Capsule())
+                }
+                .accessibilityLabel("Support Anker on Buy Me a Coffee")
+            }
+        }
+    }
+
     private var gamesTab: some View {
             NavigationStack {
                 List {
@@ -844,6 +865,12 @@ struct MainView: View {
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
+                    HStack {
+                        Spacer()
+                        coffeeButton
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 5)
                     if customWebsiteError {
                         Text("Enter a valid HTTP or HTTPS website address.")
                             .font(.caption).foregroundStyle(.red)
@@ -909,6 +936,12 @@ struct MainView: View {
             NavigationStack {
                 List {
                     Section {
+                        HStack {
+                            coffeeButton
+                            Spacer(minLength: 0)
+                        }
+                    }
+                    Section {
                         Label("Original archives stay in Files unless you choose to delete them after successful extraction. Prepared games remain in My Games.", systemImage: "externaldrive")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
@@ -942,6 +975,7 @@ struct MainView: View {
                                     .background(.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("Download Center").font(.title3.bold())
+                                    coffeeButton
                                     Text("Up to \(concurrent.limit) downloads at once").font(.caption).foregroundStyle(.secondary)
                                 }
                             }
@@ -1090,27 +1124,6 @@ struct MainView: View {
                             Label("Import archive or folder from Files", systemImage: "plus.circle.fill")
                         }
                         .disabled(store.busy)
-                    }
-                    if let donationURL = AnkerSupport.donationURL {
-                        Section("Support Anker") {
-                            Link(destination: donationURL) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "cup.and.saucer.fill")
-                                        .font(.title2)
-                                        .foregroundStyle(.orange)
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text("Buy Me a Coffee").font(.headline)
-                                        Text("Optional donation · Anker stays free")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    Image(systemName: "arrow.up.right")
-                                        .foregroundStyle(.secondary)
-                                }
-                                .padding(.vertical, 5)
-                            }
-                        }
                     }
                     Section("About & Legal") {
                         LabeledContent("Publisher", value: "Niimahz")
