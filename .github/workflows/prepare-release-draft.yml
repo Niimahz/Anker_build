@@ -1,0 +1,64 @@
+name: Prepare Anker IPA GitHub Release (Draft)
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Successful unsigned IPA workflow run ID"
+        required: true
+        default: "43627856525"
+      release_tag:
+        description: "Release tag (draft only; no public publication)"
+        required: true
+        default: "v1.0.0"
+permissions:
+  contents: write
+  actions: read
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source version and release gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "MARKETING_VERSION: '1.0.0'" project.yml
+          test -f LICENSE
+          test -f THIRD_PARTY_NOTICES.md
+          test -f RELEASE_1.0.0_FINAL_PREP.md
+          echo "Draft only: public-release security, native-license and device gates remain independently required."
+      - name: Download successful build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: AnkerGameBridge-unsigned-IPA
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+          path: release-input
+      - name: Verify and package unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          IPA="$(find release-input -type f -name '*.ipa' -print -quit)"
+          test -n "$IPA"
+          unzip -t "$IPA" >/dev/null
+          cp "$IPA" dist/Anker-v1.0.0-unsigned.ipa
+          (cd dist && sha256sum Anker-v1.0.0-unsigned.ipa > SHA256SUMS.txt)
+          echo "Unsigned IPA only; requires a suitable installation/signing method."
+      - name: Create or update DRAFT GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            if [[ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" != "true" ]]; then
+              echo "Refusing to modify an already-published release."
+              exit 1
+            fi
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* --draft --title "Anker 1.0.0 — Draft" --notes-file RELEASE_NOTES_1.0.0.md --target ${{ github.sha }}
+          fi
+          echo "Release is DRAFT and not public. Do not publish before completing release gates."
