@@ -1073,6 +1073,9 @@ struct GameDetailView: View {
     @State private var doubleCheck: MadeiraDoubleCheck.Assessment?
     @State private var steamError: String?
     @State private var steamTitle = ""
+    @State private var showRunLogPicker = false
+    @State private var runDiagnostics: MadeiraRunDiagnostics.Result?
+    @State private var runDiagnosticError: String?
     @AppStorage("anker.automaticLaunchConfig") private var automaticConfig = true
     @State private var configStatus: String?
     @State private var showMadeiraPicker = false
@@ -1180,6 +1183,17 @@ struct GameDetailView: View {
                         }
                     }
                     if let steamError { Text(steamError).font(.caption).foregroundStyle(.secondary) }
+                }
+                Section("Phase 2 · Madeira run diagnostics") {
+                    Text("After testing the game in Madeira, select its run log. Anker checks crashes, graphics initialization, memory and shader compilation. No settings are changed automatically.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    Button("Analyze Madeira run log") { showRunLogPicker = true }
+                    if let runDiagnostics {
+                        Text(runDiagnostics.evidence).font(.caption).foregroundStyle(.secondary)
+                        ForEach(runDiagnostics.observations, id: \.self) { Text("Observed: " + $0).font(.footnote) }
+                        ForEach(runDiagnostics.suggestions, id: \.self) { Text("Next test: " + $0).font(.footnote) }
+                    }
+                    if let runDiagnosticError { Text(runDiagnosticError).font(.caption).foregroundStyle(.red) }
                 }
                 Section("Automatic Config") {
                     Toggle("Automatic Config", isOn: $automaticConfig)
@@ -1289,6 +1303,18 @@ struct GameDetailView: View {
             }
         }
         .navigationTitle(folder.lastPathComponent)
+        .fileImporter(isPresented: $showRunLogPicker, allowedContentTypes: [.plainText, .data], allowsMultipleSelection: false) { result in
+            do {
+                guard let url = try result.get().first else { return }
+                let scoped = url.startAccessingSecurityScopedResource()
+                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                runDiagnostics = try MadeiraRunDiagnostics.inspect(url)
+                runDiagnosticError = nil
+            } catch {
+                runDiagnostics = nil
+                runDiagnosticError = error.localizedDescription
+            }
+        }
         .fileImporter(isPresented: $showMadeiraPicker, allowedContentTypes: [.json], allowsMultipleSelection: false) { result in
             do {
                 let selected = try result.get()
