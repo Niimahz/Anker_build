@@ -5,11 +5,13 @@
 
 **Prepare already-installed PC game folders for use with Madeira on iOS.**
 
-[Features](#features) · [Installation](#installation) · [Privacy](PRIVACY.md) · [Terms](TERMS.md) · [MIT License](LICENSE)
+[Features](#features) · [Download v1.0.0](https://github.com/Niimahz/Anker_build/releases/tag/v1.0.0) · [Installation](#installation) · [Privacy](PRIVACY.md) · [Terms](TERMS.md) · [MIT License](LICENSE)
 
 </div>
 
 ---
+
+**Latest release:** [Anker v1.0.0 (unsigned IPA)](https://github.com/Niimahz/Anker_build/releases/tag/v1.0.0) · [SHA256 checksum](https://github.com/Niimahz/Anker_build/releases/download/v1.0.0/SHA256SUMS.txt)
 
 ## Overview
 
@@ -62,10 +64,9 @@ An optional **Buy Me a Coffee** link can appear in the app's Files tab. To enabl
 
 This repository contains the iOS source and a GitHub Actions workflow for building an **unsigned IPA**.
 
-1. Open [GitHub Actions](https://github.com/Niimahz/Anker_build/actions).
-2. Select the IPA build workflow and run it (or open a successful run).
-3. Download the IPA artifact, if the build succeeds.
-4. Sign and install the IPA using an installation method available to you.
+1. Download the [latest published unsigned IPA](https://github.com/Niimahz/Anker_build/releases/tag/v1.0.0).
+2. Verify the downloaded IPA against the release's `SHA256SUMS.txt`.
+3. Sign and install it using a compatible installation method.
 
 **Important:** An unsigned IPA is not an App Store release. Build success, App Store approval, and on-device behavior are separate checks.
 
