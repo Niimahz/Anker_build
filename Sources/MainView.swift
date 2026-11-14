@@ -300,6 +300,10 @@ extension Notification.Name {
     @Published var diagnostic = ""
     @Published var extractedArchiveAwaitingDecision: URL?
     @Published var busy = false
+    @Published var extracting = false
+    @Published var extractionFileCount = 0
+    @Published var extractionWrittenBytes: Int64 = 0
+    @Published var extractionElapsedSeconds = 0
     @Published var downloading = false
     @Published var canResume = false
     @Published var downloadMode = "slow"
@@ -508,9 +512,38 @@ extension Notification.Name {
     func prepare(_ url: URL) {
         guard !busy else { return }
         busy = true
-        status = "Preparing \(url.lastPathComponent)…"
+        extracting = true
+        extractionFileCount = 0
+        extractionWrittenBytes = 0
+        extractionElapsedSeconds = 0
+        status = "Extracting \(url.lastPathComponent)…"
         diagnostic = ""
         let output = unique(library.appendingPathComponent(url.deletingPathExtension().lastPathComponent, isDirectory: true))
+        Task.detached(priority: .utility) { [weak self] in
+            let started = Date()
+            while !Task.isCancelled {
+                let isActive = await MainActor.run { self?.extracting ?? false }
+                if !isActive { break }
+                var count = 0
+                var bytes: Int64 = 0
+                if let enumerator = FileManager.default.enumerator(at: output, includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey], options: [.skipsHiddenFiles]) {
+                    for case let file as URL in enumerator {
+                        guard let values = try? file.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+                              values.isRegularFile == true else { continue }
+                        count += 1
+                        bytes += Int64(values.fileSize ?? 0)
+                    }
+                }
+                let seconds = Int(Date().timeIntervalSince(started))
+                await MainActor.run {
+                    guard self?.extracting == true else { return }
+                    self?.extractionFileCount = count
+                    self?.extractionWrittenBytes = bytes
+                    self?.extractionElapsedSeconds = seconds
+                }
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+            }
+        }
         Task.detached(priority: .userInitiated) { [weak self] in
             do {
                 let isFolder = (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
@@ -538,6 +571,7 @@ extension Notification.Name {
                     self?.diagnostic = ""
                     self?.status = "Prepared \(output.lastPathComponent)"
                     self?.busy = false
+                    self?.extracting = false
                     self?.refresh()
                     if !isFolder {
                         self?.extractedArchiveAwaitingDecision = url
@@ -550,6 +584,7 @@ extension Notification.Name {
                     self?.diagnostic = details
                     self?.status = "Extraction failed (\(url.pathExtension.uppercased())): \(error.localizedDescription)"
                     self?.busy = false
+                    self?.extracting = false
                 }
             }
         }
@@ -930,6 +965,17 @@ struct MainView: View {
                             Image(systemName: store.busy ? "hourglass" : "checkmark.circle")
                                 .foregroundStyle(store.busy ? .orange : .green)
                             Text(store.status).font(.subheadline).textSelection(.enabled)
+                        }
+                    }
+                    if store.extracting {
+                        Section("Extraction progress") {
+                            ProgressView()
+                            Text("\(store.extractionFileCount) files · \(ByteCountFormatter.string(fromByteCount: store.extractionWrittenBytes, countStyle: .file)) written")
+                                .font(.caption.monospacedDigit())
+                            Text("Elapsed: \(store.extractionElapsedSeconds / 60)m \(store.extractionElapsedSeconds % 60)s")
+                                .font(.caption)
+                            Text("Exact percentage is unavailable from this archive engine.")
+                                .font(.caption2).foregroundStyle(.secondary)
                         }
                     }
                     if !store.diagnostic.isEmpty {
