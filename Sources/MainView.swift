@@ -1067,12 +1067,31 @@ private extension FileManager {
 struct GameDetailView: View {
     let folder: URL
     @State private var report: GameInspection?
+    @State private var launchAdvice: MadeiraLaunchAdvisor?
     var body: some View {
         List {
             if let report {
                 Section("Analysis (not a compatibility guarantee)") {
                     Text(report.summary)
                     Text("\(report.fileCount) scanned entries")
+                }
+                if let launchAdvice {
+                    Section("Madeira Launch Advisor · file-based suggestions") {
+                        ForEach(launchAdvice.items) { advice in
+                            VStack(alignment: .leading, spacing: 5) {
+                                HStack {
+                                    Text(advice.title).font(.headline)
+                                    Spacer()
+                                    Text(advice.confidence + " confidence")
+                                        .font(.caption2).foregroundStyle(.secondary)
+                                }
+                                Text(advice.detail)
+                                    .font(.subheadline)
+                                    .textSelection(.enabled)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
                 }
                 Section("Windows executables — suggested order") {
                     ForEach(report.candidates) { candidate in
@@ -1111,6 +1130,9 @@ struct GameDetailView: View {
                 GameInspection.inspect(folder)
             }.value
             report = result
+            launchAdvice = await Task.detached(priority: .utility) {
+                MadeiraLaunchAdvisor.inspect(root: folder, report: result)
+            }.value
         }
     }
 }
