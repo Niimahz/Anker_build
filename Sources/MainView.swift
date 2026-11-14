@@ -1277,27 +1277,45 @@ struct GameDetailView: View {
                 current: madeiraMatch?.values[key].map { String(describing: $0) } ?? "(unset)")
         }
     }
+    private var madeiraChangePreview: some View {
+        let changes = proposedChanges()
+        return ForEach(changes.keys.sorted(), id: \.self) { key in
+            Text(changeDescription(for: key))
+                .font(.caption)
+                .textSelection(.enabled)
+        }
+    }
+
+    private func changeDescription(for key: String) -> String {
+        let oldValue = madeiraMatch?.values[key].map { String(describing: $0) } ?? "(unset)"
+        return key + ": " + oldValue + " → " + (proposed[key] ?? "")
+    }
+
     private var madeiraEditSection: some View {
         Section("Apply to Madeira · direct library edit") {
-                        Text("Close Madeira before applying. Select its madeira-library.json from LiveContainer. Only explicitly selected fields are written; a backup is created.")
-                            .font(.footnote).foregroundStyle(.secondary)
-                        Button("Select Madeira library") { showMadeiraPicker = true }
-                        if let match = madeiraMatch {
-                            Text("Matched: " + match.title).font(.headline)
-                            Text("Only checked fields are edited. Logs and controller settings stay unchanged.")
-                                .font(.caption).foregroundStyle(.secondary)
-                            madeiraFieldControls
-                            Text("Booleans: true/false. FPS mode: raw Madeira integer. Resolution: WIDTHxHEIGHT.")
-                                .font(.caption).foregroundStyle(.secondary)
-                            ForEach(proposedChanges().keys.sorted(), id: \.self) { key in
-                                Text(key + ": " + (match.values[key].map { String(describing: $0) } ?? "(unset)") + " → " + (proposed[key] ?? ""))
-                                    .font(.caption).textSelection(.enabled)
-                            }
-                            Button("Apply to Madeira") { showMadeiraConfirmation = true }
-                                .disabled(proposedChanges().isEmpty)
-                        }
-                        if let madeiraError { Text(madeiraError).font(.footnote).foregroundStyle(.red) }
-                    }
+            Text("Close Madeira before applying. Select its madeira-library.json from LiveContainer. Only explicitly selected fields are written; a backup is created.")
+                .font(.footnote).foregroundStyle(.secondary)
+            Button("Select Madeira library") { showMadeiraPicker = true }
+            madeiraMatchedSection
+            if let madeiraError {
+                Text(madeiraError).font(.footnote).foregroundStyle(.red)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var madeiraMatchedSection: some View {
+        if let match = madeiraMatch {
+            Text("Matched: " + match.title).font(.headline)
+            Text("Only checked fields are edited. Logs and controller settings stay unchanged.")
+                .font(.caption).foregroundStyle(.secondary)
+            madeiraFieldControls
+            Text("Booleans: true/false. FPS mode: raw Madeira integer. Resolution: WIDTHxHEIGHT.")
+                .font(.caption).foregroundStyle(.secondary)
+            madeiraChangePreview
+            Button("Apply to Madeira") { showMadeiraConfirmation = true }
+                .disabled(proposedChanges().isEmpty)
+        }
     }
     var body: some View {
         List {
