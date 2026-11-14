@@ -1,9 +1,9 @@
 <div align="center">
 
 # ANKER
-### Browser · Downloads · Archive Manager for iOS
+### PC Game Preparation for Madeira · Browser · Downloads · Archive Manager for iOS
 
-**Browse the web. Manage downloads. Extract archives. Organize your files.**
+**Prepare already-installed PC game folders for use with Madeira on iOS.**
 
 [Features](#features) · [Installation](#installation) · [Privacy](PRIVACY.md) · [Terms](TERMS.md) · [License](LICENSE)
 
@@ -13,11 +13,16 @@
 
 ## Overview
 
-Anker is an independent iOS utility built with SwiftUI and WebKit. It combines a general-purpose web browser, a download manager, archive extraction, and local file management in one app.
+Anker is an independent iOS utility designed to prepare **already-installed PC games** for manual import into **Madeira** on iOS. It helps transfer, extract, inspect, and organize existing Windows game folders into a format and folder structure suitable for importing into Madeira. Anker also includes a general-purpose WebKit browser and download manager.
+
+**Important:** Anker prepares game files; it does not convert Windows executables into native iOS apps, run PC games itself, or guarantee that a game will work in Madeira. Actual compatibility depends on Madeira and the game.
 
 **Anker does not host, supply, recommend, or distribute third-party games or copyrighted downloads.** Users choose their own websites and are responsible for the content they access.
 
 ## Features
+
+- Prepare and organize existing installed PC game folders for manual use in Madeira.
+- Inspect Windows executables and export the prepared folder to another app.
 
 | Feature | Description |
 | --- | --- |
