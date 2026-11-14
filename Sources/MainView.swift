@@ -567,6 +567,7 @@ struct MainView: View {
     @State private var directLink = ""
     @State private var browserDownloadStatus = ""
     @State private var pendingArchiveDeletion: URL?
+    @State private var pendingGameFolderDeletion: URL?
     @State private var pendingQueueDeletion: UUID?
     @State private var selectedTab = 1
     private let browserWebsiteNames = ["AnkerGames", "SteamUnlocked", "SteamRIP", "itch.io", "GOG", "Game Jolt", "IndieDB", "Custom Website"]
@@ -971,17 +972,56 @@ struct MainView: View {
             }.tabItem { Label("Files", systemImage: "folder") }.tag(1)
             NavigationStack {
                 List(store.games, id: \.path) { folder in
-                    NavigationLink {
-                        GameDetailView(folder: folder)
-                    } label: {
-                        Label {
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text(folder.lastPathComponent).font(.headline)
-                                Text("View executables · Export to Madeira / Playport")
-                                    .font(.caption).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 10) {
+                        NavigationLink {
+                            GameDetailView(folder: folder)
+                        } label: {
+                            Label {
+                                VStack(alignment: .leading, spacing: 5) {
+                                    Text(folder.lastPathComponent).font(.headline)
+                                    Text("View executables · Export to Madeira / Playport")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            } icon: { Image(systemName: "gamecontroller.fill").foregroundStyle(.tint) }
+                        }
+                        HStack(spacing: 12) {
+                            ShareLink(item: folder) {
+                                Label("Share folder", systemImage: "square.and.arrow.up")
                             }
-                        } icon: { Image(systemName: "gamecontroller.fill").foregroundStyle(.tint) }
+                            .buttonStyle(.bordered)
+                            Button(role: .destructive) {
+                                pendingGameFolderDeletion = folder
+                            } label: {
+                                Label("Delete folder", systemImage: "trash")
+                            }
+                            .buttonStyle(.bordered)
+                        }
                     }
+                    .padding(.vertical, 4)
+                }
+                .confirmationDialog("Delete extracted game folder?", isPresented: Binding(
+                    get: { pendingGameFolderDeletion != nil },
+                    set: { if !$0 { pendingGameFolderDeletion = nil } }
+                )) {
+                    Button("Delete extracted folder permanently", role: .destructive) {
+                        if let folder = pendingGameFolderDeletion {
+                            guard folder.deletingLastPathComponent().standardizedFileURL == store.library.standardizedFileURL else {
+                                store.status = "Cannot delete a folder outside My Games"
+                                pendingGameFolderDeletion = nil
+                                return
+                            }
+                            do {
+                                try FileManager.default.removeItem(at: folder)
+                                store.status = "Extracted game folder deleted"
+                                store.refresh()
+                            } catch {
+                                store.status = "Delete failed: " + error.localizedDescription
+                            }
+                        }
+                        pendingGameFolderDeletion = nil
+                    }
+                } message: {
+                    Text("This deletes the extracted game folder and all files inside it. The original downloaded archive, if present, is not deleted.")
                 }
                 .safeAreaInset(edge: .bottom) {
                     VStack(alignment: .leading, spacing: 4) {
