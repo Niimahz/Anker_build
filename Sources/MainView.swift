@@ -1209,8 +1209,17 @@ struct MainView: View {
                     }
                 }
                 .refreshable { store.refresh() }
-                .fileImporter(isPresented: $showImporter, allowedContentTypes: [.item, .folder], allowsMultipleSelection: false) { result in
-                    if case .success(let urls) = result, let url = urls.first { store.importItem(url) }
+                .fileImporter(isPresented: $showImporter, allowedContentTypes: [.data, .folder], allowsMultipleSelection: false) { result in
+                    switch result {
+                    case .success(let urls):
+                        guard let url = urls.first else {
+                            store.status = "No file or folder was selected."
+                            return
+                        }
+                        store.importItem(url)
+                    case .failure(let error):
+                        store.status = "Import failed: \(error.localizedDescription)"
+                    }
                 }
             }.tabItem { Label("Files", systemImage: "folder") }.tag(1)
             gamesTab
