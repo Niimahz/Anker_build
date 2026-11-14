@@ -520,27 +520,19 @@ extension Notification.Name {
         status = "Extracting \(url.lastPathComponent)…"
         diagnostic = ""
         let output = unique(library.appendingPathComponent(url.deletingPathExtension().lastPathComponent, isDirectory: true))
-        Task.detached(priority: .utility) { [weak self] in
+        let progressStore = self
+        Task.detached(priority: .utility) { [weak progressStore] in
             let started = Date()
             while !Task.isCancelled {
-                let isActive = await MainActor.run { self?.extracting ?? false }
+                let isActive = await progressStore?.extracting ?? false
                 if !isActive { break }
-                var count = 0
-                var bytes: Int64 = 0
-                if let enumerator = FileManager.default.enumerator(at: output, includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey], options: [.skipsHiddenFiles]) {
-                    for case let file as URL in enumerator {
-                        guard let values = try? file.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
-                              values.isRegularFile == true else { continue }
-                        count += 1
-                        bytes += Int64(values.fileSize ?? 0)
-                    }
-                }
-                let seconds = Int(Date().timeIntervalSince(started))
-                await MainActor.run {
-                    guard self?.extracting == true else { return }
-                    self?.extractionFileCount = count
-                    self?.extractionWrittenBytes = bytes
-                    self?.extractionElapsedSeconds = seconds
+                let snapshot = Self.extractionSnapshot(in: output)
+                let elapsed = Int(Date().timeIntervalSince(started))
+                await MainActor.run { [weak progressStore] in
+                    guard let progressStore, progressStore.extracting else { return }
+                    progressStore.extractionFileCount = snapshot.0
+                    progressStore.extractionWrittenBytes = snapshot.1
+                    progressStore.extractionElapsedSeconds = elapsed
                 }
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
             }
@@ -589,6 +581,23 @@ extension Notification.Name {
                 }
             }
         }
+    }
+    nonisolated private static func extractionSnapshot(in folder: URL) -> (Int, Int64) {
+        var count = 0
+        var bytes: Int64 = 0
+        if let enumerator = FileManager.default.enumerator(
+            at: folder,
+            includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey],
+            options: [.skipsHiddenFiles]
+        ) {
+            while let file = enumerator.nextObject() as? URL {
+                guard let values = try? file.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+                      values.isRegularFile == true else { continue }
+                count += 1
+                bytes += Int64(values.fileSize ?? 0)
+            }
+        }
+        return (count, bytes)
     }
     func executableCount(_ folder: URL) -> Int {
         guard let e = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: nil) else { return 0 }
