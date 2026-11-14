@@ -1074,6 +1074,47 @@ struct GameDetailView: View {
     @State private var steamError: String?
     @State private var steamTitle = ""
     @State private var showRunLogPicker = false
+    @State private var benchmarkScene = "Repeatable gameplay scene"
+    @State private var benchmarkAverage = ""
+    @State private var benchmarkLow = ""
+    @State private var benchmarkCrashed = false
+    @State private var benchmarkMessage: String?
+    @State private var benchmarkRevision = 0
+    @State private var showBestProfileConfirmation = false
+    private var benchmarkGameKey: String { folder.standardizedFileURL.path }
+    private var benchmarkRanking: [MadeiraBenchmark.Ranked] {
+        _ = benchmarkRevision
+        return MadeiraBenchmark.ranking(game: benchmarkGameKey, scene: benchmarkScene)
+    }
+    private func recordBenchmark() {
+        guard let match = madeiraMatch,
+              let average = Double(benchmarkAverage),
+              let low = Double(benchmarkLow) else {
+            benchmarkMessage = "Select the Madeira library and enter average FPS and 1% low FPS."
+            return
+        }
+        let profile = match.values.reduce(into: [String: String]()) { result, pair in
+            if MadeiraBenchmark.allowed.contains(pair.key) {
+                result[pair.key] = String(describing: pair.value)
+            }
+        }
+        do {
+            try MadeiraBenchmark.store(.init(game: benchmarkGameKey, scene: benchmarkScene,
+                                           profile: profile, averageFPS: average, lowFPS: low,
+                                           crashed: benchmarkCrashed))
+            benchmarkRevision += 1
+            benchmarkMessage = "Run recorded. Repeat the same scene at least twice per profile."
+        } catch { benchmarkMessage = error.localizedDescription }
+    }
+    private func loadBestProfile() {
+        guard let best = benchmarkRanking.first, let match = madeiraMatch else { return }
+        prepareFields(match, plan: launchPlan)
+        for (key, value) in best.profile where MadeiraBenchmark.allowed.contains(key) {
+            proposed[key] = value
+            if String(describing: match.values[key] ?? "") != value { selectedFields.insert(key) }
+        }
+        benchmarkMessage = "Best measured profile loaded for review. Confirm Apply to Madeira to write a backed-up change."
+    }
     @State private var runDiagnostics: MadeiraRunDiagnostics.Result?
     @State private var runDiagnosticError: String?
     @AppStorage("anker.automaticLaunchConfig") private var automaticConfig = true
@@ -1195,6 +1236,34 @@ struct GameDetailView: View {
                     }
                     if let runDiagnosticError { Text(runDiagnosticError).font(.caption).foregroundStyle(.red) }
                 }
+                Section("Phase 2 · measured profile comparison") {
+                    Text("Measure FPS in the same scene for every run. Anker cannot measure Madeira FPS directly; enter observed average and 1% low.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    TextField("Scene identifier", text: $benchmarkScene)
+                    TextField("Average FPS", text: $benchmarkAverage)
+                        .keyboardType(.decimalPad)
+                    TextField("1% low FPS", text: $benchmarkLow)
+                        .keyboardType(.decimalPad)
+                    Toggle("This run crashed", isOn: $benchmarkCrashed)
+                    Button("Save measured run") { recordBenchmark() }
+                    if let benchmarkMessage { Text(benchmarkMessage).font(.caption).foregroundStyle(.secondary) }
+                    if benchmarkRanking.isEmpty {
+                        Text("At least two successful comparable runs per profile are required before ranking.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        ForEach(Array(benchmarkRanking.enumerated()), id: \.offset) { index, result in
+                            VStack(alignment: .leading) {
+                                Text(index == 0 ? "Best measured profile" : "Profile " + String(index + 1)).bold()
+                                Text("Runs: " + String(result.runs) + " · Crashes: " + String(result.crashes))
+                                Text(String(format: "Average %.1f FPS · 1%% low %.1f FPS", result.averageFPS, result.averageLowFPS))
+                                Text(result.profile.keys.sorted().map { $0 + ": " + (result.profile[$0] ?? "") }.joined(separator: ", "))
+                                    .textSelection(.enabled)
+                            }.font(.caption)
+                        }
+                        Button("Load best measured profile") { loadBestProfile() }
+                            .disabled(madeiraMatch == nil)
+                    }
+                }
                 Section("Automatic Config") {
                     Toggle("Automatic Config", isOn: $automaticConfig)
                     Text("Automatically analyze the game and prepare suggested launch settings. No commands are executed and original files are never modified.")
@@ -1234,7 +1303,7 @@ struct GameDetailView: View {
                 }
                 if let launchPlan {
                     Section("Apply to Madeira · direct library edit") {
-                        Text("Close Madeira before applying. Choose its madeira-library.json from LiveContainer in Files. Anker will only update launch arguments for the uniquely matched game.")
+                        Text("Close Madeira before applying. Select its madeira-library.json from LiveContainer. Only explicitly selected fields are written; a backup is created.")
                             .font(.footnote).foregroundStyle(.secondary)
                         Button("Select Madeira library") { showMadeiraPicker = true }
                         if let match = madeiraMatch {
