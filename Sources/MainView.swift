@@ -1071,6 +1071,12 @@ struct GameDetailView: View {
     @State private var launchPlan: GameLaunchPlan?
     @AppStorage("anker.automaticLaunchConfig") private var automaticConfig = true
     @State private var configStatus: String?
+    @State private var showMadeiraPicker = false
+    @State private var madeiraLibraryURL: URL?
+    @State private var madeiraOriginalData: Data?
+    @State private var madeiraMatch: MadeiraLibraryEditor.Match?
+    @State private var madeiraError: String?
+    @State private var showMadeiraConfirmation = false
     var body: some View {
         List {
             if let report {
@@ -1133,6 +1139,21 @@ struct GameDetailView: View {
                         }
                     }
                 }
+                if let launchPlan {
+                    Section("Apply to Madeira · direct library edit") {
+                        Text("Close Madeira before applying. Choose its madeira-library.json from LiveContainer in Files. Anker will only update launch arguments for the uniquely matched game.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        Button("Select Madeira library") { showMadeiraPicker = true }
+                        if let match = madeiraMatch {
+                            Text("Matched: " + match.title).font(.headline)
+                            LabeledContent("Current arguments", value: match.arguments.isEmpty ? "(none)" : match.arguments)
+                            LabeledContent("Proposed arguments", value: launchPlan.arguments.isEmpty ? "(none)" : launchPlan.arguments)
+                            Button("Apply to Madeira") { showMadeiraConfirmation = true }
+                                .disabled(match.arguments == launchPlan.arguments)
+                        }
+                        if let madeiraError { Text(madeiraError).font(.footnote).foregroundStyle(.red) }
+                    }
+                }
                 Section("Windows executables — suggested order") {
                     ForEach(report.candidates) { candidate in
                         VStack(alignment: .leading, spacing: 4) {
@@ -1165,6 +1186,48 @@ struct GameDetailView: View {
             }
         }
         .navigationTitle(folder.lastPathComponent)
+        .fileImporter(isPresented: $showMadeiraPicker, allowedContentTypes: [.json], allowsMultipleSelection: false) { result in
+            do {
+                let selected = try result.get()
+                guard let url = selected.first else { return }
+                let scoped = url.startAccessingSecurityScopedResource()
+                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                let (data, entries) = try MadeiraLibraryEditor.read(url)
+                guard let exe = launchPlan?.executable else { throw MadeiraLibraryEditor.EditorError.noMatch }
+                let matches = MadeiraLibraryEditor.matches(in: entries, executable: exe)
+                guard matches.count == 1, let match = matches.first else {
+                    throw matches.isEmpty ? MadeiraLibraryEditor.EditorError.noMatch : MadeiraLibraryEditor.EditorError.ambiguousMatch
+                }
+                madeiraLibraryURL = url
+                madeiraOriginalData = data
+                madeiraMatch = match
+                madeiraError = nil
+            } catch {
+                madeiraMatch = nil
+                madeiraError = error.localizedDescription
+            }
+        }
+        .confirmationDialog("Apply changes to Madeira?", isPresented: $showMadeiraConfirmation, titleVisibility: .visible) {
+            Button("Back up and apply") {
+                guard let url = madeiraLibraryURL, let data = madeiraOriginalData,
+                      let match = madeiraMatch, let plan = launchPlan else { return }
+                let scoped = url.startAccessingSecurityScopedResource()
+                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                do {
+                    let backup = try MadeiraLibraryEditor.apply(url: url, expectedData: data,
+                                                               entryID: match.id, arguments: plan.arguments)
+                    madeiraError = "Saved. Backup: " + backup.lastPathComponent
+                    let (updated, entries) = try MadeiraLibraryEditor.read(url)
+                    madeiraOriginalData = updated
+                    madeiraMatch = entries.first(where: { $0["id"] as? String == match.id }).map {
+                        MadeiraLibraryEditor.Match(id: match.id, title: match.title, path: match.path,
+                                                   arguments: $0["arguments"] as? String ?? "")
+                    }
+                } catch { madeiraError = error.localizedDescription }
+            }
+        } message: {
+            Text("Madeira must be closed. Only the selected game's launch arguments will change. A backup will be created alongside the library.")
+        }
         .onChange(of: automaticConfig) { enabled in
             if enabled, let report {
                 launchPlan = GameLaunchPlan.build(root: folder, report: report)
