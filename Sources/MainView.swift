@@ -1080,7 +1080,6 @@ struct GameDetailView: View {
     @State private var benchmarkCrashed = false
     @State private var benchmarkMessage: String?
     @State private var benchmarkRevision = 0
-    @State private var showBestProfileConfirmation = false
     private var benchmarkGameKey: String { folder.standardizedFileURL.path }
     private var benchmarkRanking: [MadeiraBenchmark.Ranked] {
         _ = benchmarkRevision
@@ -1095,7 +1094,7 @@ struct GameDetailView: View {
         }
         let profile = match.values.reduce(into: [String: String]()) { result, pair in
             if MadeiraBenchmark.allowed.contains(pair.key) {
-                result[pair.key] = String(describing: pair.value)
+                result[pair.key] = (pair.key == "performance" || pair.key == "reducedX87") ? ((pair.value as? Bool == true) ? "true" : "false") : String(describing: pair.value)
             }
         }
         do {
