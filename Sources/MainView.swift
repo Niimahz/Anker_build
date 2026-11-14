@@ -1254,7 +1254,7 @@ struct GameDetailView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                     if !automaticConfig {
                         Button("Generate configuration now") {
-                            launchPlan = GameLaunchPlan.build(root: folder, report: report)
+                            if let report { launchPlan = GameLaunchPlan.build(root: folder, report: report) }
                             configStatus = "Launch configuration generated for review."
                         }
                     }
@@ -1262,6 +1262,21 @@ struct GameDetailView: View {
                 }
     }
 
+    private var madeiraFieldControls: some View {
+        ForEach(configFields, id: \.self) { key in
+            MadeiraSettingRow(key: key,
+                enabled: Binding(
+                    get: { selectedFields.contains(key) },
+                    set: { value in
+                        if value { selectedFields.insert(key) }
+                        else { selectedFields.remove(key) }
+                    }),
+                value: Binding(
+                    get: { proposed[key] ?? "" },
+                    set: { proposed[key] = $0 }),
+                current: madeiraMatch?.values[key].map { String(describing: $0) } ?? "(unset)")
+        }
+    }
     private var madeiraEditSection: some View {
         Section("Apply to Madeira · direct library edit") {
                         Text("Close Madeira before applying. Select its madeira-library.json from LiveContainer. Only explicitly selected fields are written; a backup is created.")
@@ -1271,24 +1286,7 @@ struct GameDetailView: View {
                             Text("Matched: " + match.title).font(.headline)
                             Text("Only checked fields are edited. Logs and controller settings stay unchanged.")
                                 .font(.caption).foregroundStyle(.secondary)
-                            ForEach(configFields, id: \.self) { key in
-                                Toggle(key, isOn: Binding(
-                                    get: { selectedFields.contains(key) },
-                                    set: { enabled in
-                                        if enabled { selectedFields.insert(key) }
-                                        else { selectedFields.remove(key) }
-                                    }
-                                ))
-                                if selectedFields.contains(key) {
-                                    TextField("New value", text: Binding(
-                                        get: { proposed[key] ?? "" },
-                                        set: { proposed[key] = $0 }
-                                    ))
-                                    .textInputAutocapitalization(.never)
-                                    Text("Current: " + (match.values[key].map { String(describing: $0) } ?? "(unset)"))
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
+                            madeiraFieldControls
                             Text("Booleans: true/false. FPS mode: raw Madeira integer. Resolution: WIDTHxHEIGHT.")
                                 .font(.caption).foregroundStyle(.secondary)
                             ForEach(proposedChanges().keys.sorted(), id: \.self) { key in
@@ -1474,6 +1472,25 @@ struct GameDetailView: View {
                 }
             } else {
                 launchPlan = nil
+            }
+        }
+    }
+}
+
+private struct MadeiraSettingRow: View {
+    let key: String
+    @Binding var enabled: Bool
+    @Binding var value: String
+    let current: String
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Toggle(key, isOn: $enabled)
+            if enabled {
+                TextField("New value", text: $value)
+                    .textInputAutocapitalization(.never)
+                Text("Current: " + current)
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
     }
