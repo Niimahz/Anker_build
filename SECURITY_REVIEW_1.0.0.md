@@ -27,3 +27,7 @@ Do not publish the current draft as a security-reviewed production release. Requ
 ## Remediation progress (commit c974443f; not yet CI-verified)
 
 Added ZIPFoundation central-directory preflight for path traversal, symlinks/special entries, 50,000-entry and 4-GiB declared-size limits; added post-extraction symlink and 4-GiB/50,000-entry verification. **Limitations:** these checks do not enforce an extraction-time byte budget, cannot establish containment of the native RAR/7z extractor, and do not protect against archive entries with misleading size metadata. A clean rebuild, negative tests and review are required before declaring the fixes effective. Existing draft IPA does not contain these changes. Public release gate remains CLOSED.
+
+## Correction — user-directed removal of restrictive preflight (commit ed49e316)
+
+The previously added 4-GiB/50,000-entry ZIP preflight and post-extraction tree inspection were removed because they prevented legitimate large game archives and could reject valid game assets. The project no longer claims these mitigations. Security work should prioritize extractor-level destination containment and safe failure/cleanup without content inspection or arbitrary game-size limits. **Archive bomb and extraction-path risks remain open** until a compatible mitigation is implemented and tested. No security clearance is implied.
