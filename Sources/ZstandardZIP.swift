@@ -141,12 +141,27 @@ enum ZstandardZIP {
                   !name.split(separator: "/").contains("..") else {
                 throw Failure.invalid("Unsafe or unsupported ZIP filename at entry \(index + 1)")
             }
+            // Reject traversal and Windows-style absolute/drive paths before writing.
+            // No file-content inspection or arbitrary expanded-size cap is applied.
+            let parts = name.split(separator: "/", omittingEmptySubsequences: true)
+            guard !parts.isEmpty,
+                  !name.hasPrefix("/"), !name.contains("\\\\"),
+                  !name.contains("\\0"), !name.contains(":"),
+                  !parts.contains(".."), !parts.contains(".") else {
+                throw Failure.invalid("Unsafe ZIP entry path")
+            }
             let target = root.appendingPathComponent(name).standardizedFileURL
             guard target.path.hasPrefix(rootPath) else { throw Failure.invalid("Unsafe entry path") }
+            // An earlier archive entry must not create a symlink that later entries follow.
+            // Only directories and regular files are created by this extractor.
             let isDirectory = name.hasSuffix("/")
             if isDirectory {
                 try manager.createDirectory(at: target, withIntermediateDirectories: true)
             } else {
+                // Never follow a pre-existing symlink or overwrite an earlier entry.
+                guard !manager.fileExists(atPath: target.path) else {
+                    throw Failure.invalid("Duplicate ZIP destination: \\(name)")
+                }
                 guard method == 0 || method == 93 else {
                     throw Failure.invalid("Unsupported ZIP compression method \(method) in \(name)")
                 }
