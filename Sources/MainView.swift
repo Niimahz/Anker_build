@@ -1069,6 +1069,9 @@ struct GameDetailView: View {
     @State private var report: GameInspection?
     @State private var launchAdvice: MadeiraLaunchAdvisor?
     @State private var launchPlan: GameLaunchPlan?
+    @State private var steamResearch: SteamGameResearch.Result?
+    @State private var steamError: String?
+    @State private var steamTitle = ""
     @AppStorage("anker.automaticLaunchConfig") private var automaticConfig = true
     @State private var configStatus: String?
     @State private var showMadeiraPicker = false
@@ -1108,6 +1111,18 @@ struct GameDetailView: View {
             selectedFields.insert("arguments")
         }
     }
+    private func researchSteam() async {
+        let title = steamTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return }
+        steamResearch = nil
+        steamError = nil
+        do {
+            let architecture = report?.candidates.first?.architecture ?? "Unknown"
+            steamResearch = try await SteamGameResearch.lookup(title: title, architecture: architecture)
+        } catch {
+            steamError = error.localizedDescription
+        }
+    }
     var body: some View {
         List {
             if let report {
@@ -1132,6 +1147,24 @@ struct GameDetailView: View {
                             .padding(.vertical, 4)
                         }
                     }
+                }
+                Section("Steam research · Windows requirements") {
+                    TextField("Game title for Steam", text: $steamTitle)
+                    Button("Search Steam and analyze requirements") {
+                        Task { await researchSteam() }
+                    }
+                    if let steamResearch {
+                        Text(steamResearch.title).font(.headline)
+                        Text(steamResearch.confidence).font(.caption).foregroundStyle(.secondary)
+                        Text(steamResearch.requirements).font(.footnote).textSelection(.enabled)
+                        ForEach(steamResearch.suggestions, id: \.self) { note in
+                            Text("• " + note).font(.footnote)
+                        }
+                        if let url = steamResearch.url {
+                            Link("View Steam listing", destination: url)
+                        }
+                    }
+                    if let steamError { Text(steamError).font(.caption).foregroundStyle(.secondary) }
                 }
                 Section("Automatic Config") {
                     Toggle("Automatic Config", isOn: $automaticConfig)
@@ -1294,6 +1327,9 @@ struct GameDetailView: View {
             }
         }
         .task(id: folder.path) {
+            steamTitle = folder.lastPathComponent
+            if automaticConfig { await researchSteam() }
+
             let result = await Task.detached(priority: .userInitiated) {
                 GameInspection.inspect(folder)
             }.value
