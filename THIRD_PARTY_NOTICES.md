@@ -17,4 +17,4 @@ Apple WebKit and platform frameworks are provided under Apple's platform terms.
 
 The dependency list above is a preliminary inventory, **not a completed binary redistribution notice bundle**. Before publicly distributing a new IPA, verify the resolved dependency revisions, include the full applicable copyright and license texts, and check any bundled C libraries and transitive dependencies. A public GitHub repository does not by itself grant permission to redistribute third-party game art or games.
 
-The project LICENSE currently reserves rights to the original Anker code; publishing source on GitHub does not automatically make it open source. Do not describe Anker as MIT-licensed unless the rights holder deliberately adopts that license.
+The original Anker source code is published under the repository's MIT LICENSE. This license does not supersede third-party licenses, copyright notices, or trademark rights. The third-party binary redistribution review remains incomplete.
