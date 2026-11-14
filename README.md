@@ -48,6 +48,10 @@ Anker does not provide games or bypass licensing requirements. Users are respons
 | 🔎 BAT/CMD analysis | Read and classify batch-script commands and identify Windows executables; scripts are not executed or automatically applied |
 | 🛡️ Ad blocking | Optional built-in content filtering |
 
+## Game artwork and branding
+
+Anker displays a locally supplied `cover.jpg`, `cover.jpeg`, `cover.png`, `folder.jpg`, `poster.jpg`, or `poster.png` from the top level of each prepared game folder. If none is present, the app uses a generic controller symbol. **Anker does not bundle, fetch, or redistribute third-party game artwork.** Only add images you own or are licensed to use; trademarks and game logos belong to their respective owners.
+
 ## Installation
 
 This repository contains the iOS source and a GitHub Actions workflow for building an **unsigned IPA**.
@@ -93,6 +97,8 @@ The detailed release gates and device smoke tests are tracked in [RELEASE_1.0.0_
 - [ ] Test signed builds on supported iPhones
 - [ ] Verify privacy claims against actual app behavior and dependencies
 - [ ] Add screenshots, support contact, and versioned release notes
+- [ ] Decide whether to open-source original code: the existing LICENSE is all-rights-reserved, not an open-source license
+- [ ] Validate that cover images supplied by users are not redistributed in releases
 - [ ] Review App Store policies and applicable copyright laws
 
 ---
