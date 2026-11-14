@@ -606,6 +606,37 @@ extension Notification.Name {
     }
 }
 
+private struct AnkerGameArtwork: View {
+    let folder: URL
+    private var cover: UIImage? {
+        for name in ["cover.jpg", "cover.jpeg", "cover.png", "folder.jpg", "poster.jpg", "poster.png"] {
+            let url = folder.appendingPathComponent(name)
+            if let image = UIImage(contentsOfFile: url.path) { return image }
+        }
+        return nil
+    }
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(LinearGradient(colors: [Color.indigo.opacity(0.85), Color.blue.opacity(0.55), Color.black.opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            if let cover {
+                Image(uiImage: cover)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 76, height: 82)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            } else {
+                Image(systemName: "gamecontroller.fill")
+                    .font(.system(size: 30, weight: .medium))
+                    .foregroundStyle(.white)
+            }
+        }
+        .frame(width: 76, height: 82)
+        .accessibilityLabel("Game artwork")
+    }
+}
+
 struct MainView: View {
     @StateObject private var store = GameStore()
     @StateObject private var concurrent = ConcurrentDownloads()
@@ -920,6 +951,7 @@ struct MainView: View {
                         LabeledContent("Publisher", value: "Niimahz")
                         Link("Terms of Use", destination: URL(string: "https://github.com/Niimahz/Anker_build/blob/main/TERMS.md")!)
                         Link("Privacy Policy", destination: URL(string: "https://github.com/Niimahz/Anker_build/blob/main/PRIVACY.md")!)
+                        Link("Third-party notices", destination: URL(string: "https://github.com/Niimahz/Anker_build/blob/main/THIRD_PARTY_NOTICES.md")!)
                         Link("Copyright & Licenses", destination: URL(string: "https://github.com/Niimahz/Anker_build/blob/main/LICENSE")!)
                         Text("Only download and share content you have the right to use.")
                             .font(.caption).foregroundStyle(.secondary)
@@ -981,33 +1013,94 @@ struct MainView: View {
                 }
             }.tabItem { Label("Files", systemImage: "folder") }.tag(1)
             NavigationStack {
-                List(store.games, id: \.path) { folder in
-                    VStack(alignment: .leading, spacing: 10) {
-                        NavigationLink {
-                            GameDetailView(folder: folder)
-                        } label: {
-                            Label {
-                                VStack(alignment: .leading, spacing: 5) {
-                                    Text(folder.lastPathComponent).font(.headline)
-                                    Text("View executables · Export to Madeira / Playport")
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
-                            } icon: { Image(systemName: "gamecontroller.fill").foregroundStyle(.tint) }
-                        }
-                        HStack(spacing: 12) {
-                            ShareLink(item: folder) {
-                                Label("Share folder", systemImage: "square.and.arrow.up")
+                List {
+                    Section {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "gamecontroller.fill")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                Text("ANKER")
+                                    .font(.caption.weight(.black))
+                                    .tracking(3)
+                                    .foregroundStyle(.white.opacity(0.85))
                             }
-                            .buttonStyle(.bordered)
-                            Button(role: .destructive) {
-                                pendingGameFolderDeletion = folder
+                            Text("Your game library")
+                                .font(.title2.weight(.bold))
+                                .foregroundStyle(.white)
+                            Text("\(store.games.count) prepared game\(store.games.count == 1 ? "" : "s") · Ready to inspect, organize and export")
+                                .font(.subheadline)
+                                .foregroundStyle(.white.opacity(0.83))
+                            Button {
+                                selectedTab = 1
                             } label: {
-                                Label("Delete folder", systemImage: "trash")
+                                Label("Import another game", systemImage: "plus.circle.fill")
+                                    .font(.subheadline.weight(.semibold))
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.borderedProminent)
+                            .tint(.white)
+                            .foregroundStyle(.indigo)
+                        }
+                        .padding(18)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            LinearGradient(colors: [.indigo, .blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing),
+                            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        )
+                    }
+                    .listRowBackground(Color.clear)
+                    if store.games.isEmpty {
+                        ContentUnavailableView("No games yet", systemImage: "gamecontroller",
+                            description: Text("Download or import an archive in Files, then extract it to My Games."))
+                    } else {
+                        Section("Prepared games") {
+                            ForEach(store.games, id: \.path) { folder in
+                                VStack(alignment: .leading, spacing: 12) {
+                                    NavigationLink {
+                                        GameDetailView(folder: folder)
+                                    } label: {
+                                        HStack(spacing: 14) {
+                                            AnkerGameArtwork(folder: folder)
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                Text(folder.lastPathComponent)
+                                                    .font(.headline)
+                                                    .lineLimit(2)
+                                                Label("Prepared locally", systemImage: "checkmark.seal.fill")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.green)
+                                                Text("Inspect · Launch plan · Export")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                        .padding(.vertical, 5)
+                                    }
+                                    HStack(spacing: 12) {
+                                        ShareLink(item: folder) {
+                                            Label("Export", systemImage: "square.and.arrow.up")
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .tint(.indigo)
+                                        Button(role: .destructive) {
+                                            pendingGameFolderDeletion = folder
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                        .buttonStyle(.bordered)
+                                    }
+                                }
+                                .padding(.vertical, 5)
+                            }
                         }
                     }
-                    .padding(.vertical, 4)
+                    Section("Artwork & rights") {
+                        Label("Add your own licensed cover.jpg or cover.png inside a game's folder to show its artwork.", systemImage: "photo")
+                            .font(.caption)
+                        Text("Anker does not download or redistribute game logos, covers, or game files.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .confirmationDialog("Delete extracted game folder?", isPresented: Binding(
                     get: { pendingGameFolderDeletion != nil },
