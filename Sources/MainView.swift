@@ -36,7 +36,7 @@ final class BrowserNavigationState: ObservableObject {
         downloadResumeData = nil
         browserDownloadPaused = false
         webView.resumeDownload(fromResumeData: data) { [weak self] download in
-            guard let self, let download else { return }
+            guard let self else { return }
             download.delegate = self.browserDownloadDelegate
             self.browserDownloadDelegate?.observeDownload(download)
         }
