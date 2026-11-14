@@ -1174,32 +1174,8 @@ struct GameDetailView: View {
             steamError = error.localizedDescription
         }
     }
-    var body: some View {
-        List {
-            if let report {
-                Section("Analysis (not a compatibility guarantee)") {
-                    Text(report.summary)
-                    Text("\(report.fileCount) scanned entries")
-                }
-                if let launchAdvice {
-                    Section("Madeira Launch Advisor · file-based suggestions") {
-                        ForEach(launchAdvice.items) { advice in
-                            VStack(alignment: .leading, spacing: 5) {
-                                HStack {
-                                    Text(advice.title).font(.headline)
-                                    Spacer()
-                                    Text(advice.confidence + " confidence")
-                                        .font(.caption2).foregroundStyle(.secondary)
-                                }
-                                Text(advice.detail)
-                                    .font(.subheadline)
-                                    .textSelection(.enabled)
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
-                }
-                Section("Steam research · Windows requirements") {
+    private var steamSection: some View {
+        Section("Steam research · Windows requirements") {
                     TextField("Game title for Steam", text: $steamTitle)
                     Button("Search Steam and analyze requirements") {
                         Task { await researchSteam() }
@@ -1224,7 +1200,10 @@ struct GameDetailView: View {
                     }
                     if let steamError { Text(steamError).font(.caption).foregroundStyle(.secondary) }
                 }
-                Section("Phase 2 · Madeira run diagnostics") {
+    }
+
+    private var diagnosticsSection: some View {
+        Section("Phase 2 · Madeira run diagnostics") {
                     Text("After testing the game in Madeira, select its run log. Anker checks crashes, graphics initialization, memory and shader compilation. No settings are changed automatically.")
                         .font(.footnote).foregroundStyle(.secondary)
                     Button("Analyze Madeira run log") { showRunLogPicker = true }
@@ -1235,7 +1214,10 @@ struct GameDetailView: View {
                     }
                     if let runDiagnosticError { Text(runDiagnosticError).font(.caption).foregroundStyle(.red) }
                 }
-                Section("Phase 2 · measured profile comparison") {
+    }
+
+    private var benchmarkSection: some View {
+        Section("Phase 2 · measured profile comparison") {
                     Text("Measure FPS in the same scene for every run. Anker cannot measure Madeira FPS directly; enter observed average and 1% low.")
                         .font(.footnote).foregroundStyle(.secondary)
                     TextField("Scene identifier", text: $benchmarkScene)
@@ -1263,7 +1245,10 @@ struct GameDetailView: View {
                             .disabled(madeiraMatch == nil)
                     }
                 }
-                Section("Automatic Config") {
+    }
+
+    private var automaticSection: some View {
+        Section("Automatic Config") {
                     Toggle("Automatic Config", isOn: $automaticConfig)
                     Text("Automatically analyze the game and prepare suggested launch settings. No commands are executed and original files are never modified.")
                         .font(.footnote).foregroundStyle(.secondary)
@@ -1275,33 +1260,10 @@ struct GameDetailView: View {
                     }
                     if let configStatus { Text(configStatus).font(.caption).foregroundStyle(.secondary) }
                 }
-                if let launchPlan {
-                    Section("Launch preparation · preview only") {
-                        Text("No original files are changed. Use the suggested values manually in Madeira where supported.")
-                            .font(.footnote).foregroundStyle(.secondary)
-                        LabeledContent("Executable", value: launchPlan.executable ?? "Not found")
-                        LabeledContent("Arguments", value: launchPlan.arguments.isEmpty ? "(none)" : launchPlan.arguments)
-                        LabeledContent("Working directory", value: launchPlan.workingDirectory)
-                        LabeledContent("Confidence", value: launchPlan.confidence)
-                        if !launchPlan.environment.isEmpty {
-                            Text("Environment variables").font(.headline)
-                            ForEach(launchPlan.environment) { item in
-                                VStack(alignment: .leading) {
-                                    Text(item.label).font(.subheadline).bold()
-                                    Text(item.value).font(.caption).textSelection(.enabled)
-                                }
-                            }
-                        }
-                        ForEach(launchPlan.notes, id: \.self) { note in
-                            Text("• " + note).font(.footnote).textSelection(.enabled)
-                        }
-                        ShareLink(item: launchPlan.preview) {
-                            Label("Share launch plan (text)", systemImage: "square.and.arrow.up")
-                        }
-                    }
-                }
-                if let launchPlan {
-                    Section("Apply to Madeira · direct library edit") {
+    }
+
+    private var madeiraEditSection: some View {
+        Section("Apply to Madeira · direct library edit") {
                         Text("Close Madeira before applying. Select its madeira-library.json from LiveContainer. Only explicitly selected fields are written; a backup is created.")
                             .font(.footnote).foregroundStyle(.secondary)
                         Button("Select Madeira library") { showMadeiraPicker = true }
@@ -1338,6 +1300,63 @@ struct GameDetailView: View {
                         }
                         if let madeiraError { Text(madeiraError).font(.footnote).foregroundStyle(.red) }
                     }
+    }
+    var body: some View {
+        List {
+            if let report {
+                Section("Analysis (not a compatibility guarantee)") {
+                    Text(report.summary)
+                    Text("\(report.fileCount) scanned entries")
+                }
+                if let launchAdvice {
+                    Section("Madeira Launch Advisor · file-based suggestions") {
+                        ForEach(launchAdvice.items) { advice in
+                            VStack(alignment: .leading, spacing: 5) {
+                                HStack {
+                                    Text(advice.title).font(.headline)
+                                    Spacer()
+                                    Text(advice.confidence + " confidence")
+                                        .font(.caption2).foregroundStyle(.secondary)
+                                }
+                                Text(advice.detail)
+                                    .font(.subheadline)
+                                    .textSelection(.enabled)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+                steamSection
+                diagnosticsSection
+                benchmarkSection
+                automaticSection
+                if let launchPlan {
+                    Section("Launch preparation · preview only") {
+                        Text("No original files are changed. Use the suggested values manually in Madeira where supported.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        LabeledContent("Executable", value: launchPlan.executable ?? "Not found")
+                        LabeledContent("Arguments", value: launchPlan.arguments.isEmpty ? "(none)" : launchPlan.arguments)
+                        LabeledContent("Working directory", value: launchPlan.workingDirectory)
+                        LabeledContent("Confidence", value: launchPlan.confidence)
+                        if !launchPlan.environment.isEmpty {
+                            Text("Environment variables").font(.headline)
+                            ForEach(launchPlan.environment) { item in
+                                VStack(alignment: .leading) {
+                                    Text(item.label).font(.subheadline).bold()
+                                    Text(item.value).font(.caption).textSelection(.enabled)
+                                }
+                            }
+                        }
+                        ForEach(launchPlan.notes, id: \.self) { note in
+                            Text("• " + note).font(.footnote).textSelection(.enabled)
+                        }
+                        ShareLink(item: launchPlan.preview) {
+                            Label("Share launch plan (text)", systemImage: "square.and.arrow.up")
+                        }
+                    }
+                }
+                if let launchPlan {
+                    madeiraEditSection
                 }
                 Section("Windows executables — suggested order") {
                     ForEach(report.candidates) { candidate in
