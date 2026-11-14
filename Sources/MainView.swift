@@ -1068,6 +1068,7 @@ struct GameDetailView: View {
     let folder: URL
     @State private var report: GameInspection?
     @State private var launchAdvice: MadeiraLaunchAdvisor?
+    @State private var launchPlan: GameLaunchPlan?
     var body: some View {
         List {
             if let report {
@@ -1090,6 +1091,31 @@ struct GameDetailView: View {
                                     .textSelection(.enabled)
                             }
                             .padding(.vertical, 4)
+                        }
+                    }
+                }
+                if let launchPlan {
+                    Section("Launch preparation · preview only") {
+                        Text("No original files are changed. Use the suggested values manually in Madeira where supported.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        LabeledContent("Executable", value: launchPlan.executable ?? "Not found")
+                        LabeledContent("Arguments", value: launchPlan.arguments.isEmpty ? "(none)" : launchPlan.arguments)
+                        LabeledContent("Working directory", value: launchPlan.workingDirectory)
+                        LabeledContent("Confidence", value: launchPlan.confidence)
+                        if !launchPlan.environment.isEmpty {
+                            Text("Environment variables").font(.headline)
+                            ForEach(launchPlan.environment) { item in
+                                VStack(alignment: .leading) {
+                                    Text(item.label).font(.subheadline).bold()
+                                    Text(item.value).font(.caption).textSelection(.enabled)
+                                }
+                            }
+                        }
+                        ForEach(launchPlan.notes, id: \.self) { note in
+                            Text("• " + note).font(.footnote).textSelection(.enabled)
+                        }
+                        ShareLink(item: launchPlan.preview) {
+                            Label("Share launch plan (text)", systemImage: "square.and.arrow.up")
                         }
                     }
                 }
@@ -1132,6 +1158,9 @@ struct GameDetailView: View {
             report = result
             launchAdvice = await Task.detached(priority: .utility) {
                 MadeiraLaunchAdvisor.inspect(root: folder, report: result)
+            }.value
+            launchPlan = await Task.detached(priority: .utility) {
+                GameLaunchPlan.build(root: folder, report: result)
             }.value
         }
     }
