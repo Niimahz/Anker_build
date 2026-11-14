@@ -1209,7 +1209,7 @@ struct MainView: View {
                     }
                 }
                 .refreshable { store.refresh() }
-                .fileImporter(isPresented: $showImporter, allowedContentTypes: [.data, .folder], allowsMultipleSelection: false) { result in
+                .fileImporter(isPresented: $showImporter, allowedContentTypes: [.item, .data, .content, .archive, .zip, .folder], allowsMultipleSelection: false) { result in
                     switch result {
                     case .success(let urls):
                         guard let url = urls.first else {
