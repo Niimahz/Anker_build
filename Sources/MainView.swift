@@ -833,7 +833,7 @@ struct MainView: View {
                                             Text(job.url.lastPathComponent.isEmpty ? (job.url.host ?? "Download") : job.url.lastPathComponent)
                                                 .font(.subheadline.weight(.semibold))
                                                 .lineLimit(2)
-                                            Text(job.state)
+                                            Text(job.mode == "fast" && job.state == "Downloading" && job.received == 0 ? "Downloading 4 parts · progress updates as each part completes" : job.state)
                                                 .font(.caption)
                                                 .foregroundStyle(job.state.hasPrefix("Failed") ? Color.red : Color.secondary)
                                                 .lineLimit(3)
