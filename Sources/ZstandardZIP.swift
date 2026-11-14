@@ -135,6 +135,14 @@ enum ZstandardZIP {
                 }
                 guard foundZIP64 else { throw Failure.invalid("Missing ZIP64 entry field") }
             }
+            // ZIP creators may mark a member as a Unix symlink or special file.
+            // This extractor intentionally writes regular files and directories only.
+            let madeBy = number(central, cursor + 5, 1)
+            let unixMode = number(central, cursor + 40, 4) >> 16
+            let fileType = unixMode & 0xF000
+            if madeBy == 3 && fileType != 0 && fileType != 0x8000 && fileType != 0x4000 {
+                throw Failure.invalid("Unsafe ZIP special-file entry at index \\(index + 1)")
+            }
             let nameBytes = Data(central[(cursor + 46)..<(cursor + 46 + nameSize)])
             guard let name = String(data: nameBytes, encoding: .utf8),
                   !name.isEmpty, !name.hasPrefix("/"), !name.contains("\\"),
@@ -149,6 +157,16 @@ enum ZstandardZIP {
                   !name.contains("\0"), !name.contains(":"),
                   !parts.contains(".."), !parts.contains(".") else {
                 throw Failure.invalid("Unsafe ZIP entry path")
+            }
+            // Reject any pre-existing symbolic link in the destination path, including
+            // duplicate archive entries. This is a metadata check, not content scanning.
+            var ancestor = root.standardizedFileURL
+            for part in parts {
+                ancestor.appendPathComponent(String(part))
+                if let values = try? ancestor.resourceValues(forKeys: [.isSymbolicLinkKey]),
+                   values.isSymbolicLink == true {
+                    throw Failure.invalid("ZIP entry would follow a symbolic link")
+                }
             }
             let target = root.appendingPathComponent(name).standardizedFileURL
             guard target.path.hasPrefix(rootPath) else { throw Failure.invalid("Unsafe entry path") }
