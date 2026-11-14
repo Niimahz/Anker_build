@@ -19,7 +19,14 @@ final class ConcurrentDownloads: ObservableObject {
 
     @Published private(set) var jobs: [Job] = []
     @Published private(set) var revision = 0
-    private let limit = 3
+    @Published private(set) var limit = 3
+
+    func setLimit(_ value: Int) {
+        guard (1...4).contains(value) else { return }
+        limit = value
+        changed()
+        pump()
+    }
     private var activeCount: Int {
         jobs.filter { $0.state == "Downloading" || $0.state == "Connecting" }.count
     }
