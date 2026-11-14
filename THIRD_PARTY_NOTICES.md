@@ -24,3 +24,16 @@ The original Anker source code is published under the repository's MIT LICENSE. 
 The inspected upstream `awxkee/zstd.swift/Package.swift` uses a prebuilt `Sources/libzstd/libzstd.xcframework`. The inspected `kmworks/libarchive-swift/Package.swift` uses a downloaded `CArchive.xcframework.zip` binary target. Their wrapper licenses alone do **not** verify the provenance, exact embedded native library versions, or all required native copyright notices. Verify these before public IPA distribution.
 
 The project's `project.yml` currently references `zstd.swift` on mutable `master`; a reviewed immutable commit is required for reproducible public release builds.
+
+
+## Release 1.0.0 resolved dependency notices (2026-11-14)
+
+The successful iOS build log for run 43632998071 resolved ZIPFoundation 0.9.20, libarchive-swift 0.1.11, and zstd.swift revision 475fe31. The following complete license texts are now retained in this repository for redistribution alongside the IPA:
+
+- `LICENSES/ZIPFOUNDATION_MIT_0.9.20.txt` — ZIPFoundation MIT notice.
+- `LICENSES/LIBARCHIVE_SWIFT_BSD_2_CLAUSE.txt` — libarchive-swift BSD-2-Clause notice.
+- `LICENSES/LIBARCHIVE_BINARY_COPYING.txt` — libarchive upstream copying and exceptions, from the libarchive-swift distribution.
+- `LICENSES/ZSTD_SWIFT_CC0_1.0.txt` — zstd.swift CC0 text.
+- `LICENSES/ZSTANDARD_NATIVE_BSD_3_CLAUSE.txt` — native Zstandard BSD license.
+
+The native zstd static XCFramework and CArchive static XCFramework are upstream-provided binaries. Their source-to-binary provenance, exact native version, complete included object inventory, and absence of additional components have **not** been independently proven by a byte-level or reproducible-build comparison. These notices cover the identified upstream projects but do not certify the identity of arbitrary precompiled bytes. Redistributors should ship the `LICENSES` directory with the release and keep the notices accessible.
