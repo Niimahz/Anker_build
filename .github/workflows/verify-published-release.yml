@@ -1,0 +1,81 @@
+name: Verify published Anker v1.0.0 IPA and correct release notes
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/verify-published-release.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch published IPA and source build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p published source
+          gh release view v1.0.0 --repo "$REPO" --json isDraft,isPrerelease --jq 'if .isDraft or .isPrerelease then error("Not final") else "Public final release" end'
+          gh release download v1.0.0 --repo "$REPO" --pattern 'Anker-v1.0.0-unsigned.ipa' --dir published
+          gh release download v1.0.0 --repo "$REPO" --pattern 'SHA256SUMS.txt' --dir published
+          (cd published && sha256sum -c SHA256SUMS.txt)
+          test "$(gh api "repos/$REPO/actions/runs/43633438315" --jq .head_sha)" = e9f5de1bf7d1b29d7733f097c3020def671bdda3
+          test "$(gh api "repos/$REPO/actions/runs/43633438315" --jq .conclusion)" = success
+      - name: Download source build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: AnkerGameBridge-unsigned-IPA
+          run-id: 43633438315
+          github-token: ${{ github.token }}
+          path: source
+      - name: Verify IPA bytes match successful source build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find source -type f -name '*.ipa')
+          test "${#files[@]}" -eq 1
+          cmp -s "${files[0]}" published/Anker-v1.0.0-unsigned.ipa || { echo 'FAIL: published IPA differs from audited source build'; exit 1; }
+          unzip -t published/Anker-v1.0.0-unsigned.ipa >/dev/null
+          echo "PASS: published IPA exactly matches source build Run 43633438315"
+      - name: Update release notes after successful verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > notes.md <<'EOF'
+          # Anker 1.0.0 — Final Release
+
+          Anker is a free, open-source iOS utility for browsing, concurrent downloads, supported archive extraction, and preparing locally supplied PC game files for transfer to other apps.
+
+          ## Features
+          - WebKit browser and download management with configurable concurrent downloads.
+          - Local ZIP, RAR/RAR5, 7z and other supported archive extraction, subject to storage and format support.
+          - Files dashboard, prepared Games library, user-supplied cover images and export.
+          - Windows executable and BAT/CMD inspection; scripts are never executed.
+          - Optional Buy Me a Coffee link; no features require payment.
+
+          ## Download and install
+          Download **Anker-v1.0.0-unsigned.ipa** below. The IPA is **unsigned** and is not an App Store installation. A compatible signing/installation or container workflow is required.
+
+          Verify its SHA-256 with the attached **SHA256SUMS.txt**.
+
+          ## Build integrity
+          The published IPA has been byte-for-byte compared with the successful GitHub Actions build [Run 43633438315](https://github.com/Niimahz/Anker_build/actions/runs/43633438315), built from source commit `e9f5de1bf7d1b29d7733f097c3020def671bdda3`. The release verification workflow must pass before this note is applied.
+
+          Automated dependency checksum, license-file presence, and upstream archive-library tests passed in [audit Run 43634460564](https://github.com/Niimahz/Anker_build/actions/runs/43634460564). These checks do not constitute a guarantee against all vulnerabilities or independently reproducible native binaries.
+
+          ## Important
+          Anker does not run Windows games, provide game downloads, bypass licensing, or guarantee compatibility with Madeira. Only import files you are entitled to use.
+
+          Source: [Anker_build](https://github.com/Niimahz/Anker_build) · [MIT License](https://github.com/Niimahz/Anker_build/blob/main/LICENSE) · [Third-party notices](https://github.com/Niimahz/Anker_build/blob/main/THIRD_PARTY_NOTICES.md) · [Contributors](https://github.com/Niimahz/Anker_build/blob/main/CONTRIBUTORS.md)
+          EOF
+          gh release edit v1.0.0 --repo "$REPO" --notes-file notes.md --title "Anker 1.0.0" --latest
+          echo 'Verified IPA and updated published release notes.'
