@@ -145,8 +145,8 @@ enum ZstandardZIP {
             // No file-content inspection or arbitrary expanded-size cap is applied.
             let parts = name.split(separator: "/", omittingEmptySubsequences: true)
             guard !parts.isEmpty,
-                  !name.hasPrefix("/"), !name.contains("\\\\"),
-                  !name.contains("\\0"), !name.contains(":"),
+                  !name.hasPrefix("/"), !name.contains("\\"),
+                  !name.contains("\0"), !name.contains(":"),
                   !parts.contains(".."), !parts.contains(".") else {
                 throw Failure.invalid("Unsafe ZIP entry path")
             }
@@ -160,7 +160,7 @@ enum ZstandardZIP {
             } else {
                 // Never follow a pre-existing symlink or overwrite an earlier entry.
                 guard !manager.fileExists(atPath: target.path) else {
-                    throw Failure.invalid("Duplicate ZIP destination: \\(name)")
+                    throw Failure.invalid("Duplicate ZIP destination: \(name)")
                 }
                 guard method == 0 || method == 93 else {
                     throw Failure.invalid("Unsupported ZIP compression method \(method) in \(name)")
