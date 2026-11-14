@@ -35,3 +35,7 @@ The previously added 4-GiB/50,000-entry ZIP preflight and post-extraction tree i
 ## Additional remediation — Zstandard ZIP (commit 1d6c00e)
 
 Added path-component validation and duplicate-target rejection to the custom Zstandard ZIP extraction path. No file-content scanning or 4-GiB game-size cap was introduced. This change has **not** been compiled or exercised in CI/device regression during this review. Other archive extraction backends still require containment verification; supply-chain audit and a new release build remain open. Final production clearance: **NOT YET APPROVED**.
+
+## Compatibility correction (commit 8d224f3)
+
+Removed duplicate-destination rejection in the custom Zstandard ZIP extractor at user request. Path traversal and standardized destination-prefix checks remain. Duplicate entries may overwrite earlier entries. Existing path checks alone are not a verified defense against symlink-based traversal; extractor containment remains subject to security tests. Final release approval remains pending.
