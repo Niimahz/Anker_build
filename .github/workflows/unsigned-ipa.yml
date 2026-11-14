@@ -1,0 +1,35 @@
+name: Build unsigned IPA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate app icon
+        run: |
+          python3 -m pip install --break-system-packages pillow
+          python3 scripts/generate_icon.py
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Parse Swift sources
+        run: xcrun swiftc -frontend -parse Sources/*.swift
+      - name: Build for iPhone without signing
+        run: xcodebuild -project AnkerGameBridge.xcodeproj -scheme AnkerGameBridge -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/AnkerGameBridge.app Payload/
+          test -f Payload/AnkerGameBridge.app/Info.plist
+          test -f Payload/AnkerGameBridge.app/AnkerGameBridge
+          zip -qry AnkerGameBridge-unsigned.ipa Payload
+          unzip -t AnkerGameBridge-unsigned.ipa
+          unzip -l AnkerGameBridge-unsigned.ipa | grep "Payload/AnkerGameBridge.app/AnkerGameBridge"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AnkerGameBridge-unsigned-IPA
+          path: AnkerGameBridge-unsigned.ipa
