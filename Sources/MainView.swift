@@ -721,8 +721,21 @@ struct MainView: View {
                     }
                     .listRowBackground(Color.clear)
                     if store.games.isEmpty {
-                        ContentUnavailableView("No games yet", systemImage: "gamecontroller",
-                            description: Text("Download or import an archive in Files, then extract it to My Games."))
+                        VStack(spacing: 12) {
+                            Image(systemName: "gamecontroller")
+                                .font(.system(size: 38, weight: .medium))
+                                .foregroundStyle(.secondary)
+                            Text("No games yet")
+                                .font(.headline)
+                            Text("Download or import an archive in Files, then extract it to My Games.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                            Button("Open Files") { selectedTab = 1 }
+                                .buttonStyle(.borderedProminent)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 28)
                     } else {
                         Section("Prepared games") {
                             ForEach(store.games, id: \.path) { folder in
