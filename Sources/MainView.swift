@@ -1077,6 +1077,37 @@ struct GameDetailView: View {
     @State private var madeiraMatch: MadeiraLibraryEditor.Match?
     @State private var madeiraError: String?
     @State private var showMadeiraConfirmation = false
+    @State private var proposed: [String: String] = [:]
+    @State private var selectedFields: Set<String> = []
+    private let configFields = ["arguments", "bits", "graphicsAPI", "resolution", "fpsMode", "performance", "reducedX87"]
+    private func proposedChanges() -> [String: Any] {
+        guard let match = madeiraMatch else { return [:] }
+        var changes: [String: Any] = [:]
+        for key in selectedFields {
+            guard let value = proposed[key] else { continue }
+            let typed: Any
+            switch key {
+            case "bits", "fpsMode":
+                guard let number = Int(value) else { continue }
+                typed = number
+            case "performance", "reducedX87":
+                guard value == "true" || value == "false" else { continue }
+                typed = value == "true"
+            default: typed = value
+            }
+            if String(describing: match.values[key] ?? "") != String(describing: typed) { changes[key] = typed }
+        }
+        return changes
+    }
+    private func prepareFields(_ match: MadeiraLibraryEditor.Match, plan: GameLaunchPlan?) {
+        selectedFields = []
+        proposed = [:]
+        for key in configFields { proposed[key] = match.values[key].map { String(describing: $0) } ?? "" }
+        if let plan, !plan.arguments.isEmpty, plan.arguments != match.arguments {
+            proposed["arguments"] = plan.arguments
+            selectedFields.insert("arguments")
+        }
+    }
     var body: some View {
         List {
             if let report {
@@ -1146,10 +1177,34 @@ struct GameDetailView: View {
                         Button("Select Madeira library") { showMadeiraPicker = true }
                         if let match = madeiraMatch {
                             Text("Matched: " + match.title).font(.headline)
-                            LabeledContent("Current arguments", value: match.arguments.isEmpty ? "(none)" : match.arguments)
-                            LabeledContent("Proposed arguments", value: launchPlan.arguments.isEmpty ? "(none)" : launchPlan.arguments)
+                            Text("Only checked fields are edited. Logs and controller settings stay unchanged.")
+                                .font(.caption).foregroundStyle(.secondary)
+                            ForEach(configFields, id: \.self) { key in
+                                Toggle(key, isOn: Binding(
+                                    get: { selectedFields.contains(key) },
+                                    set: { enabled in
+                                        if enabled { selectedFields.insert(key) }
+                                        else { selectedFields.remove(key) }
+                                    }
+                                ))
+                                if selectedFields.contains(key) {
+                                    TextField("New value", text: Binding(
+                                        get: { proposed[key] ?? "" },
+                                        set: { proposed[key] = $0 }
+                                    ))
+                                    .textInputAutocapitalization(.never)
+                                    Text("Current: " + (match.values[key].map { String(describing: $0) } ?? "(unset)"))
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                            Text("Booleans: true/false. FPS mode: raw Madeira integer. Resolution: WIDTHxHEIGHT.")
+                                .font(.caption).foregroundStyle(.secondary)
+                            ForEach(proposedChanges().keys.sorted(), id: \.self) { key in
+                                Text(key + ": " + (match.values[key].map { String(describing: $0) } ?? "(unset)") + " → " + (proposed[key] ?? ""))
+                                    .font(.caption).textSelection(.enabled)
+                            }
                             Button("Apply to Madeira") { showMadeiraConfirmation = true }
-                                .disabled(match.arguments == launchPlan.arguments)
+                                .disabled(proposedChanges().isEmpty)
                         }
                         if let madeiraError { Text(madeiraError).font(.footnote).foregroundStyle(.red) }
                     }
@@ -1201,6 +1256,7 @@ struct GameDetailView: View {
                 madeiraLibraryURL = url
                 madeiraOriginalData = data
                 madeiraMatch = match
+                prepareFields(match, plan: launchPlan)
                 madeiraError = nil
             } catch {
                 madeiraMatch = nil
@@ -1210,23 +1266,23 @@ struct GameDetailView: View {
         .confirmationDialog("Apply changes to Madeira?", isPresented: $showMadeiraConfirmation, titleVisibility: .visible) {
             Button("Back up and apply") {
                 guard let url = madeiraLibraryURL, let data = madeiraOriginalData,
-                      let match = madeiraMatch, let plan = launchPlan else { return }
+                      let match = madeiraMatch else { return }
                 let scoped = url.startAccessingSecurityScopedResource()
                 defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                 do {
                     let backup = try MadeiraLibraryEditor.apply(url: url, expectedData: data,
-                                                               entryID: match.id, arguments: plan.arguments)
+                                                               entryID: match.id, changes: proposedChanges())
                     madeiraError = "Saved. Backup: " + backup.lastPathComponent
                     let (updated, entries) = try MadeiraLibraryEditor.read(url)
                     madeiraOriginalData = updated
                     madeiraMatch = entries.first(where: { $0["id"] as? String == match.id }).map {
                         MadeiraLibraryEditor.Match(id: match.id, title: match.title, path: match.path,
-                                                   arguments: $0["arguments"] as? String ?? "")
+                                                   arguments: $0["arguments"] as? String ?? "", values: $0)
                     }
                 } catch { madeiraError = error.localizedDescription }
             }
         } message: {
-            Text("Madeira must be closed. Only the selected game's launch arguments will change. A backup will be created alongside the library.")
+            Text("Madeira must be closed. Only checked settings for the matched game will change. A backup will be created alongside the library.")
         }
         .onChange(of: automaticConfig) { enabled in
             if enabled, let report {
