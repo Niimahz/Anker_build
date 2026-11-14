@@ -25,7 +25,7 @@ jobs:
   build-unsigned-ipa:
     runs-on: macos-15
     permissions:
-      contents: ${{ inputs.publish_prerelease && 'write' || 'read' }}
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
