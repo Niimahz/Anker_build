@@ -698,10 +698,11 @@ struct MainView: View {
                         Image(systemName: "arrow.up.right")
                             .font(.caption2)
                     }
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 9)
-                    .background(.orange.opacity(0.14), in: Capsule())
-                    .overlay(Capsule().strokeBorder(.orange.opacity(0.30), lineWidth: 1))
+                    .background(.white.opacity(0.17), in: Capsule())
+                    .overlay(Capsule().strokeBorder(.white.opacity(0.35), lineWidth: 1))
                 }
                 .accessibilityLabel("Support Anker on Buy Me a Coffee")
             }
