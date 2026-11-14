@@ -1,0 +1,97 @@
+name: Prepare GitHub IPA Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (must match project.yml)'
+        required: true
+        default: '1.0.0'
+        type: string
+      publish_prerelease:
+        description: 'Publish a public GitHub prerelease after successful verification'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: anker-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-unsigned-ipa:
+    runs-on: macos-15
+    permissions:
+      contents: ${{ inputs.publish_prerelease && 'write' || 'read' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate release version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid version"; exit 1; }
+          grep -Fq "MARKETING_VERSION: '$RELEASE_VERSION'" project.yml || { echo "Version mismatch in project.yml"; exit 1; }
+          echo "RELEASE_TAG=v$RELEASE_VERSION-rc.1" >> "$GITHUB_ENV"
+      - name: Install XcodeGen and Pillow
+        run: |
+          brew install xcodegen
+          python3 -m pip install --break-system-packages pillow
+      - name: Generate icon and Xcode project
+        run: |
+          python3 scripts/generate_icon.py
+          xcodegen generate
+          xcrun swiftc -frontend -parse Sources/*.swift
+      - name: Build unsigned IPA
+        run: |
+          set -euo pipefail
+          xcodebuild -project AnkerGameBridge.xcodeproj -scheme AnkerGameBridge -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+          APP="build/Build/Products/Release-iphoneos/AnkerGameBridge.app"
+          test -d "$APP"
+          ACTUAL_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")
+          ACTUAL_BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")
+          ACTUAL_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
+          test "$ACTUAL_VERSION" = "${{ inputs.version }}"
+          test "$ACTUAL_BUILD" = "1"
+          test "$ACTUAL_ID" = "com.ankergamebridge.app"
+          mkdir -p release/Payload
+          ditto "$APP" release/Payload/AnkerGameBridge.app
+          (cd release && zip -qry "Anker-${{ inputs.version }}-unsigned.ipa" Payload)
+          unzip -t "release/Anker-${{ inputs.version }}-unsigned.ipa" | tail -n 1
+          (cd release && shasum -a 256 "Anker-${{ inputs.version }}-unsigned.ipa" > SHA256SUMS.txt)
+          cp RELEASE_1.0.0_RC.md release/RELEASE_NOTES.md
+          rm -rf release/Payload
+      - name: Upload verified unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Anker-${{ inputs.version }}-release-candidate
+          path: |
+            release/*.ipa
+            release/SHA256SUMS.txt
+            release/RELEASE_NOTES.md
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish GitHub prerelease (explicit opt-in only)
+        if: ${{ inputs.publish_prerelease }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release tag already exists; refusing to overwrite."
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" \
+            "release/Anker-${{ inputs.version }}-unsigned.ipa" \
+            release/SHA256SUMS.txt \
+            release/RELEASE_NOTES.md \
+            --target "$GITHUB_SHA" \
+            --title "Anker ${{ inputs.version }} — unsigned IPA (RC)" \
+            --notes-file release/RELEASE_NOTES.md \
+            --prerelease
