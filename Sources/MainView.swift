@@ -700,7 +700,7 @@ struct MainView: View {
                                     .background(.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("Download Center").font(.title3.bold())
-                                    Text("Up to 3 downloads at once").font(.caption).foregroundStyle(.secondary)
+                                    Text("Up to \(concurrent.limit) downloads at once").font(.caption).foregroundStyle(.secondary)
                                 }
                             }
                             HStack(spacing: 8) {
@@ -718,6 +718,12 @@ struct MainView: View {
                             }
                             .padding(12)
                             .background(Color.secondary.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
+                            Picker("Simultaneous downloads", selection: Binding(get: { concurrent.limit }, set: { concurrent.setLimit($0) })) {
+                                ForEach(1...4, id: \.self) { count in
+                                    Text("\(count)").tag(count)
+                                }
+                            }
+                            .pickerStyle(.segmented)
                             HStack(spacing: 10) {
                                 Picker("Mode", selection: $store.downloadMode) {
                                     Text("Fast · 4 parts").tag("fast")
