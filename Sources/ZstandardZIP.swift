@@ -158,10 +158,6 @@ enum ZstandardZIP {
             if isDirectory {
                 try manager.createDirectory(at: target, withIntermediateDirectories: true)
             } else {
-                // Never follow a pre-existing symlink or overwrite an earlier entry.
-                guard !manager.fileExists(atPath: target.path) else {
-                    throw Failure.invalid("Duplicate ZIP destination: \(name)")
-                }
                 guard method == 0 || method == 93 else {
                     throw Failure.invalid("Unsupported ZIP compression method \(method) in \(name)")
                 }
