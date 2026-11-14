@@ -132,9 +132,10 @@ struct Browser: UIViewRepresentable {
         }
         init(fastDownload: @escaping (URL) -> Bool, pageChanged: @escaping (String) -> Void, navigation: BrowserNavigationState) {
             self.navigation = navigation
-            navigation.browserDownloadDelegate = self
             self.fastDownload = fastDownload
             self.pageChanged = pageChanged
+            super.init()
+            navigation.browserDownloadDelegate = self
         }
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
             webView.reload()
