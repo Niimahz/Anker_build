@@ -681,6 +681,11 @@ struct MainView: View {
         customWebsiteURL = candidate
         customNavigationVersion += 1
     }
+    private var brandGradient: LinearGradient {
+        LinearGradient(colors: [Color(red: 0.12, green: 0.18, blue: 0.40), .indigo, Color(red: 0.35, green: 0.26, blue: 0.70)],
+                       startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
     private var coffeeButton: some View {
         Group {
             if let donationURL = AnkerSupport.donationURL {
@@ -695,7 +700,8 @@ struct MainView: View {
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 9)
-                    .background(.orange.opacity(0.12), in: Capsule())
+                    .background(.orange.opacity(0.14), in: Capsule())
+                    .overlay(Capsule().strokeBorder(.orange.opacity(0.30), lineWidth: 1))
                 }
                 .accessibilityLabel("Support Anker on Buy Me a Coffee")
             }
@@ -736,7 +742,7 @@ struct MainView: View {
                         .padding(18)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(
-                            LinearGradient(colors: [.indigo, .blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing),
+                            brandGradient,
                             in: RoundedRectangle(cornerRadius: 22, style: .continuous)
                         )
                     }
@@ -851,7 +857,7 @@ struct MainView: View {
             NavigationStack {
                 VStack(spacing: 0) {
                     HStack(spacing: 8) {
-                        Image(systemName: "globe").foregroundStyle(.green)
+                        Image(systemName: "globe").foregroundStyle(.indigo)
                         TextField("Enter website address", text: $customWebsiteInput)
                             .keyboardType(.URL)
                             .textInputAutocapitalization(.never)
@@ -862,7 +868,8 @@ struct MainView: View {
                             .buttonStyle(.borderedProminent)
                     }
                     .padding(10)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.indigo.opacity(0.20), lineWidth: 1))
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
                     if customWebsiteError {
@@ -912,7 +919,7 @@ struct MainView: View {
                     .background(.regularMaterial)
                     .overlay(alignment: .top) { Divider() }
                 }
-                .navigationTitle("Web Browser")
+                .navigationTitle("Anker · Browse")
                 .navigationBarTitleDisplayMode(.inline)
             }
             .onReceive(NotificationCenter.default.publisher(for: .gameBridgeBrowserDownloadStarted)) { _ in
@@ -930,13 +937,33 @@ struct MainView: View {
             NavigationStack {
                 List {
                     Section {
-                        HStack {
-                            coffeeButton
-                            Spacer(minLength: 0)
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: "shippingbox.fill")
+                                    .font(.system(size: 27, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 48, height: 48)
+                                    .background(.white.opacity(0.15), in: RoundedRectangle(cornerRadius: 14))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("ANKER").font(.caption.weight(.black)).tracking(3)
+                                        .foregroundStyle(.white.opacity(0.75))
+                                    Text("Your file hub").font(.title2.bold()).foregroundStyle(.white)
+                                    Text("Download · Extract · Organize")
+                                        .font(.subheadline).foregroundStyle(.white.opacity(0.80))
+                                }
+                            }
+                            HStack {
+                                coffeeButton
+                                Spacer()
+                            }
                         }
+                        .padding(18)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(brandGradient, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                     }
+                    .listRowBackground(Color.clear)
                     Section {
-                        Label("Original archives stay in Files unless you choose to delete them after successful extraction. Prepared games remain in My Games.", systemImage: "externaldrive")
+                        Label("Archives stay in Files until you choose to delete them. Extracted games stay in My Games.", systemImage: "externaldrive")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     if !browserDownloadStatus.isEmpty || browserNavigation.browserDownloadActive || browserNavigation.browserDownloadPaused {
@@ -964,9 +991,9 @@ struct MainView: View {
                             HStack(spacing: 10) {
                                 Image(systemName: "arrow.down.to.line.compact")
                                     .font(.title2.bold())
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(.indigo)
                                     .frame(width: 44, height: 44)
-                                    .background(.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
+                                    .background(.indigo.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("Download Center").font(.title3.bold())
                                     Text("Up to \(concurrent.limit) downloads at once").font(.caption).foregroundStyle(.secondary)
@@ -1007,14 +1034,16 @@ struct MainView: View {
                                     .padding(.vertical, 5)
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(.green)
+                            .tint(.indigo)
                             .disabled(directLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             Text("For verified or protected links, tap Download inside Browse. A copied page URL may not be the file URL.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        .padding(.vertical, 6)
+                        .padding(12)
+                        .background(Color.indigo.opacity(0.05), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }
+                    .listRowBackground(Color.clear)
                     if !concurrent.jobs.isEmpty {
                         Section("Queue · \(concurrent.jobs.count)") {
                             ForEach(concurrent.jobs) { job in
@@ -1171,7 +1200,7 @@ struct MainView: View {
                     }
                 } message: { Text("Deletes the completed file and temporary download parts when present.") }
 
-                .navigationTitle("Anker Bridge")
+                .navigationTitle("Anker · Files")
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { store.refresh() } label: { Image(systemName: "arrow.clockwise") }
@@ -1185,6 +1214,7 @@ struct MainView: View {
             }.tabItem { Label("Files", systemImage: "folder") }.tag(1)
             gamesTab
         }
+        .tint(.indigo)
         .alert("Delete downloaded archive?", isPresented: Binding(
             get: { store.extractedArchiveAwaitingDecision != nil },
             set: { if !$0 { store.keepExtractedArchive() } }
