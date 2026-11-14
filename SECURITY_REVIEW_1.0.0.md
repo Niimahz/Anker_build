@@ -39,3 +39,15 @@ Added path-component validation and duplicate-target rejection to the custom Zst
 ## Compatibility correction (commit 8d224f3)
 
 Removed duplicate-destination rejection in the custom Zstandard ZIP extractor at user request. Path traversal and standardized destination-prefix checks remain. Duplicate entries may overwrite earlier entries. Existing path checks alone are not a verified defense against symlink-based traversal; extractor containment remains subject to security tests. Final release approval remains pending.
+
+
+## Consolidated follow-up (2026-11-14, commits 79352137–73cd2475)
+
+- Successful build 43632998071 resolved zstd.swift at 475fe31, ZIPFoundation 0.9.20 and libarchive-swift 0.1.11. The Zstandard package was pinned to that commit in `project.yml`.
+- The exact upstream package redistribution texts and native upstream libarchive/Zstandard notices have been added to `LICENSES/`. This closes the **missing known license-text files** issue, but **not** binary provenance verification of prebuilt XCFramework contents.
+- Custom ZIP+Zstd extraction now rejects Unix special-file entries and refuses to follow any pre-existing symbolic-link component on output paths, in addition to rejecting absolute and parent-traversal paths. These changes require a new iOS build and adversarial runtime testing.
+- libarchive-swift upstream documents rejection of unsafe archive paths and symlink/hardlink targets by default, but this is a library documentation claim rather than independently executed tests of the resolved binary.
+- No arbitrary 4-GiB game size or 50,000-entry restriction was reintroduced. Disk exhaustion remains possible when extracting untrusted archives; no extraction-time quota is enforced.
+- The release draft workflow now rejects an IPA whose originating workflow commit differs from the current checkout, preventing accidental stale-artifact publication.
+
+**Current evidence-based decision: source hardening and notice bundling improved; full security penetration testing, exact native XCFramework provenance, and final-IPA binary inspection are not yet established. Do not claim a completed independent audit.**
