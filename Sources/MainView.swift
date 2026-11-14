@@ -865,12 +865,6 @@ struct MainView: View {
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
-                    HStack {
-                        Spacer()
-                        coffeeButton
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 5)
                     if customWebsiteError {
                         Text("Enter a valid HTTP or HTTPS website address.")
                             .font(.caption).foregroundStyle(.red)
@@ -975,7 +969,6 @@ struct MainView: View {
                                     .background(.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("Download Center").font(.title3.bold())
-                                    coffeeButton
                                     Text("Up to \(concurrent.limit) downloads at once").font(.caption).foregroundStyle(.secondary)
                                 }
                             }
