@@ -20,7 +20,7 @@ Anker is a free, MIT-licensed iOS file preparation utility for browsing, downloa
 - [x] Reference copies of ZIPFoundation and libarchive-swift upstream license texts added under `LICENSES/`.
 - [ ] Resolve and record **exact** dependency versions/commits, including zstd.swift and bundled native libraries; pin mutable branches.
 - [ ] Verify and distribute **all** applicable third-party license/copyright texts, including libarchive's bundled C notices and zstd transitive code.
-- [ ] Complete on-device regression testing for browser, concurrent download, large ZIP/RAR5/7z extraction, disk-space failures, import/export, backups and destructive actions.
+- [ ] Complete full on-device regression testing, including disk-space failures, backups and destructive actions. **User-reported successful functional tests (2026-11-14):** downloads, ZIP/RAR/7z extraction and transfer to Madeira; other edge cases have not been explicitly confirmed.
 - [ ] Complete security and privacy review of downloads, untrusted archives, URLs and network traffic.
 - [ ] Confirm legal publisher identity and public support/privacy email.
 - [ ] Select a distribution channel and prepare a correctly signed release binary. GitHub Actions currently produces **unsigned** IPA.
@@ -37,3 +37,7 @@ Do not rename the existing CI artifact to an approved final release or promise A
 ## Suggested release notes
 
 Anker 1.0.0 introduces an iOS browser, multi-download file manager, on-device archive extraction and a prepared game library with local artwork and export. Anker is free and open source. Support is optional via Buy Me a Coffee in Files. Windows game execution is handled by third-party tools, not Anker. Users must supply files they are authorized to use.
+
+## User acceptance evidence — 2026-11-14
+
+The project owner reports successful iPhone functional testing of the current UI candidate, including downloading files, extracting ZIP/RAR/7z archives and transferring prepared files to Madeira. This is **user-reported acceptance**, not an independent automated test report. It does not establish low-storage, malicious-archive, backup/restore, privacy, or security coverage. Do not mark the full regression or security gates as passed on this basis alone.
