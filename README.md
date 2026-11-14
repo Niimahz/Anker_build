@@ -86,6 +86,8 @@ The app does **not** execute Windows software. Extraction support depends on arc
 
 ### Release checklist
 
+The detailed release gates and device smoke tests are tracked in [RELEASE_1.0.0_RC.md](RELEASE_1.0.0_RC.md).
+
 - [ ] Confirm legal publisher name and support email
 - [ ] Verify licenses and bundle all required third-party notices
 - [ ] Test signed builds on supported iPhones
