@@ -511,61 +511,6 @@ extension Notification.Name {
             status = "Could not delete archive: " + error.localizedDescription
         }
     }
-    // Reject suspicious ZIP metadata before invoking any ZIP decoder.
-    // This is a defense-in-depth preflight, not a substitute for extraction-time quotas.
-    nonisolated private static func preflightZIP(_ url: URL) throws {
-        guard let archive = Archive(url: url, accessMode: .read) else {
-            throw NSError(domain: "AnkerSecurity", code: 1, userInfo: [NSLocalizedDescriptionKey: "Cannot inspect ZIP central directory"])
-        }
-        var count = 0
-        var total: UInt64 = 0
-        let maximumBytes: UInt64 = 4 * 1024 * 1024 * 1024
-        for entry in archive {
-            count += 1
-            guard count <= 50_000 else {
-                throw NSError(domain: "AnkerSecurity", code: 2, userInfo: [NSLocalizedDescriptionKey: "ZIP contains too many entries"])
-            }
-            let path = entry.path.replacingOccurrences(of: "\\", with: "/")
-            let components = path.split(separator: "/", omittingEmptySubsequences: false)
-            guard !path.hasPrefix("/"), !path.contains("\0"),
-                  !components.contains(".."), !components.contains("."),
-                  !path.contains(":") else {
-                throw NSError(domain: "AnkerSecurity", code: 3, userInfo: [NSLocalizedDescriptionKey: "Unsafe ZIP entry path"])
-            }
-            guard entry.type == .file || entry.type == .directory else {
-                throw NSError(domain: "AnkerSecurity", code: 4, userInfo: [NSLocalizedDescriptionKey: "ZIP links and special entries are not supported"])
-            }
-            let bytes = UInt64(entry.uncompressedSize)
-            guard bytes <= maximumBytes, total <= maximumBytes - bytes else {
-                throw NSError(domain: "AnkerSecurity", code: 5, userInfo: [NSLocalizedDescriptionKey: "ZIP expanded size exceeds 4 GiB safety limit"])
-            }
-            total += bytes
-        }
-    }
-
-    // Check extracted output for links and oversized data before exposing it in My Games.
-    nonisolated private static func verifyExtractedTree(_ root: URL) throws {
-        let fm = FileManager.default
-        guard let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: [.isSymbolicLinkKey, .isRegularFileKey, .fileSizeKey], options: []) else {
-            throw NSError(domain: "AnkerSecurity", code: 6, userInfo: [NSLocalizedDescriptionKey: "Cannot inspect extracted files"])
-        }
-        var count = 0
-        var total: Int64 = 0
-        for case let item as URL in enumerator {
-            count += 1
-            let values = try item.resourceValues(forKeys: [.isSymbolicLinkKey, .isRegularFileKey, .fileSizeKey])
-            guard count <= 50_000, values.isSymbolicLink != true else {
-                throw NSError(domain: "AnkerSecurity", code: 7, userInfo: [NSLocalizedDescriptionKey: "Too many files or a symbolic link was extracted"])
-            }
-            if values.isRegularFile == true {
-                let bytes = Int64(values.fileSize ?? 0)
-                guard bytes >= 0, bytes <= 4_294_967_296, total <= 4_294_967_296 - bytes else {
-                    throw NSError(domain: "AnkerSecurity", code: 8, userInfo: [NSLocalizedDescriptionKey: "Extracted content exceeds 4 GiB safety limit"])
-                }
-                total += bytes
-            }
-        }
-    }
     func prepare(_ url: URL) {
         guard !busy else { return }
         busy = true
