@@ -1070,6 +1070,7 @@ struct GameDetailView: View {
     @State private var launchAdvice: MadeiraLaunchAdvisor?
     @State private var launchPlan: GameLaunchPlan?
     @State private var steamResearch: SteamGameResearch.Result?
+    @State private var doubleCheck: MadeiraDoubleCheck.Assessment?
     @State private var steamError: String?
     @State private var steamTitle = ""
     @AppStorage("anker.automaticLaunchConfig") private var automaticConfig = true
@@ -1106,9 +1107,11 @@ struct GameDetailView: View {
         selectedFields = []
         proposed = [:]
         for key in configFields { proposed[key] = match.values[key].map { String(describing: $0) } ?? "" }
-        if let plan, !plan.arguments.isEmpty, plan.arguments != match.arguments {
-            proposed["arguments"] = plan.arguments
-            selectedFields.insert("arguments")
+        if automaticConfig, let assessment = doubleCheck {
+            for (key, value) in assessment.suggested {
+                proposed[key] = value
+                if String(describing: match.values[key] ?? "") != value { selectedFields.insert(key) }
+            }
         }
     }
     private func researchSteam() async {
@@ -1118,7 +1121,12 @@ struct GameDetailView: View {
         steamError = nil
         do {
             let architecture = report?.candidates.first?.architecture ?? "Unknown"
-            steamResearch = try await SteamGameResearch.lookup(title: title, architecture: architecture)
+            let result = try await SteamGameResearch.lookup(title: title, architecture: architecture)
+            steamResearch = result
+            if let report, let launchPlan {
+                doubleCheck = MadeiraDoubleCheck.assess(steam: result, report: report, plan: launchPlan)
+                if let match = madeiraMatch, automaticConfig { prepareFields(match, plan: launchPlan) }
+            }
         } catch {
             steamError = error.localizedDescription
         }
@@ -1152,6 +1160,13 @@ struct GameDetailView: View {
                     TextField("Game title for Steam", text: $steamTitle)
                     Button("Search Steam and analyze requirements") {
                         Task { await researchSteam() }
+                    }
+                    if let doubleCheck {
+                        Text("Double-check results").font(.headline)
+                        Text(doubleCheck.confidence).font(.caption).foregroundStyle(.secondary)
+                        ForEach(doubleCheck.checks, id: \.self) { check in
+                            Text("• " + check).font(.footnote)
+                        }
                     }
                     if let steamResearch {
                         Text(steamResearch.title).font(.headline)
@@ -1341,6 +1356,9 @@ struct GameDetailView: View {
                 launchPlan = await Task.detached(priority: .utility) {
                     GameLaunchPlan.build(root: folder, report: result)
                 }.value
+                if let steamResearch, let launchPlan {
+                    doubleCheck = MadeiraDoubleCheck.assess(steam: steamResearch, report: result, plan: launchPlan)
+                }
             } else {
                 launchPlan = nil
             }
