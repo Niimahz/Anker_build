@@ -31,3 +31,7 @@ Added ZIPFoundation central-directory preflight for path traversal, symlinks/spe
 ## Correction — user-directed removal of restrictive preflight (commit ed49e316)
 
 The previously added 4-GiB/50,000-entry ZIP preflight and post-extraction tree inspection were removed because they prevented legitimate large game archives and could reject valid game assets. The project no longer claims these mitigations. Security work should prioritize extractor-level destination containment and safe failure/cleanup without content inspection or arbitrary game-size limits. **Archive bomb and extraction-path risks remain open** until a compatible mitigation is implemented and tested. No security clearance is implied.
+
+## Additional remediation — Zstandard ZIP (commit 1d6c00e)
+
+Added path-component validation and duplicate-target rejection to the custom Zstandard ZIP extraction path. No file-content scanning or 4-GiB game-size cap was introduced. This change has **not** been compiled or exercised in CI/device regression during this review. Other archive extraction backends still require containment verification; supply-chain audit and a new release build remain open. Final production clearance: **NOT YET APPROVED**.
