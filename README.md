@@ -5,7 +5,7 @@
 
 **Prepare already-installed PC game folders for use with Madeira on iOS.**
 
-[Features](#features) · [Installation](#installation) · [Privacy](PRIVACY.md) · [Terms](TERMS.md) · [License](LICENSE)
+[Features](#features) · [Installation](#installation) · [Privacy](PRIVACY.md) · [Terms](TERMS.md) · [MIT License](LICENSE)
 
 </div>
 
@@ -52,6 +52,12 @@ Anker does not provide games or bypass licensing requirements. Users are respons
 
 Anker displays a locally supplied `cover.jpg`, `cover.jpeg`, `cover.png`, `folder.jpg`, `poster.jpg`, or `poster.png` from the top level of each prepared game folder. If none is present, the app uses a generic controller symbol. **Anker does not bundle, fetch, or redistribute third-party game artwork.** Only add images you own or are licensed to use; trademarks and game logos belong to their respective owners.
 
+## Open-source license and donations
+
+Anker's original source code is released under the [MIT License](LICENSE). You may use, modify, and redistribute it under MIT terms. Third-party libraries and artwork retain their own licenses.
+
+An optional **Buy Me a Coffee** link can appear in the app's Files tab. To enable it, set `AnkerSupport.buyMeACoffeeProfileURL` in `Sources/AnkerSupport.swift` to the project's verified HTTPS Buy Me a Coffee profile. Until configured, the donation card stays hidden; no guessed payment destination is used. Donations are voluntary and do not unlock features. Never request payment credentials inside the app.
+
 ## Installation
 
 This repository contains the iOS source and a GitHub Actions workflow for building an **unsigned IPA**.
@@ -97,7 +103,7 @@ The detailed release gates and device smoke tests are tracked in [RELEASE_1.0.0_
 - [ ] Test signed builds on supported iPhones
 - [ ] Verify privacy claims against actual app behavior and dependencies
 - [ ] Add screenshots, support contact, and versioned release notes
-- [ ] Decide whether to open-source original code: the existing LICENSE is all-rights-reserved, not an open-source license
+- [ ] Decide whether to open-source original code: the original code is MIT-licensed; verify that all bundled third-party notices are complete
 - [ ] Validate that cover images supplied by users are not redistributed in releases
 - [ ] Review App Store policies and applicable copyright laws
 
