@@ -15,6 +15,12 @@
 
 Anker is an independent iOS utility designed to prepare **already-installed PC games** for manual import into **Madeira** on iOS. It helps transfer, extract, inspect, and organize existing Windows game folders into a format and folder structure suitable for importing into Madeira. Anker also includes a general-purpose WebKit browser and download manager.
 
+### Already have a PC game folder?
+
+Anker makes it easier to prepare, extract, organize, and transfer compatible Windows game files for use with Madeira on iOS — including supported portable game distributions and pre-installed game backups.
+
+Anker does not provide games or bypass licensing requirements. Users are responsible for obtaining and using their files legally.
+
 **Important:** Anker prepares game files; it does not convert Windows executables into native iOS apps, run PC games itself, or guarantee that a game will work in Madeira. Actual compatibility depends on Madeira and the game.
 
 **Anker does not host, supply, recommend, or distribute third-party games or copyrighted downloads.** Users choose their own websites and are responsible for the content they access.
