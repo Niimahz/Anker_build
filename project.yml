@@ -28,7 +28,7 @@ targets:
 packages:
   Zstandard:
     url: https://github.com/awxkee/zstd.swift.git
-    branch: master
+    revision: 475fe31
   LibArchive:
     url: https://github.com/kmworks/libarchive-swift.git
     from: 0.1.6
