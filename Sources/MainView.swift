@@ -1069,6 +1069,8 @@ struct GameDetailView: View {
     @State private var report: GameInspection?
     @State private var launchAdvice: MadeiraLaunchAdvisor?
     @State private var launchPlan: GameLaunchPlan?
+    @AppStorage("anker.automaticLaunchConfig") private var automaticConfig = true
+    @State private var configStatus: String?
     var body: some View {
         List {
             if let report {
@@ -1093,6 +1095,18 @@ struct GameDetailView: View {
                             .padding(.vertical, 4)
                         }
                     }
+                }
+                Section("Automatic Config") {
+                    Toggle("Automatic Config", isOn: $automaticConfig)
+                    Text("Automatically analyze the game and prepare suggested launch settings. No commands are executed and original files are never modified.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    if !automaticConfig {
+                        Button("Generate configuration now") {
+                            launchPlan = GameLaunchPlan.build(root: folder, report: report)
+                            configStatus = "Launch configuration generated for review."
+                        }
+                    }
+                    if let configStatus { Text(configStatus).font(.caption).foregroundStyle(.secondary) }
                 }
                 if let launchPlan {
                     Section("Launch preparation · preview only") {
@@ -1151,6 +1165,15 @@ struct GameDetailView: View {
             }
         }
         .navigationTitle(folder.lastPathComponent)
+        .onChange(of: automaticConfig) { enabled in
+            if enabled, let report {
+                launchPlan = GameLaunchPlan.build(root: folder, report: report)
+                configStatus = "Automatic configuration prepared for review."
+            } else if !enabled {
+                launchPlan = nil
+                configStatus = nil
+            }
+        }
         .task(id: folder.path) {
             let result = await Task.detached(priority: .userInitiated) {
                 GameInspection.inspect(folder)
@@ -1159,9 +1182,13 @@ struct GameDetailView: View {
             launchAdvice = await Task.detached(priority: .utility) {
                 MadeiraLaunchAdvisor.inspect(root: folder, report: result)
             }.value
-            launchPlan = await Task.detached(priority: .utility) {
-                GameLaunchPlan.build(root: folder, report: result)
-            }.value
+            if automaticConfig {
+                launchPlan = await Task.detached(priority: .utility) {
+                    GameLaunchPlan.build(root: folder, report: result)
+                }.value
+            } else {
+                launchPlan = nil
+            }
         }
     }
 }
