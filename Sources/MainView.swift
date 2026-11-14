@@ -739,34 +739,6 @@ struct MainView: View {
                                 return true
                             })
                         .id("\(selectedWebsite)-\(selectedWebsite == 7 ? customNavigationVersion : 0)")
-                    if browserNavigation.browserDownloadActive || browserNavigation.browserDownloadPaused {
-                        VStack(alignment: .leading, spacing: 7) {
-                            HStack {
-                                Label(browserNavigation.browserDownloadPaused ? "Download paused" : "Direct download", systemImage: "arrow.down.circle")
-                                    .font(.subheadline.weight(.semibold))
-                                Spacer()
-                                if browserNavigation.browserDownloadActive {
-                                    Button("Pause") { browserNavigation.pauseBrowserDownload() }
-                                        .buttonStyle(.bordered)
-                                } else if browserNavigation.browserDownloadPaused {
-                                    Button("Resume") { browserNavigation.resumeBrowserDownload() }
-                                        .buttonStyle(.borderedProminent)
-                                }
-                            }
-                            if browserNavigation.browserDownloadTotal > 0 {
-                                ProgressView(value: browserNavigation.browserDownloadProgress)
-                                Text("\(Int(browserNavigation.browserDownloadProgress * 100))% · \(ByteCountFormatter.string(fromByteCount: browserNavigation.browserDownloadBytes, countStyle: .file)) of \(ByteCountFormatter.string(fromByteCount: browserNavigation.browserDownloadTotal, countStyle: .file))")
-                                    .font(.caption.monospacedDigit())
-                            } else if browserNavigation.browserDownloadActive {
-                                ProgressView()
-                                Text("\(ByteCountFormatter.string(fromByteCount: browserNavigation.browserDownloadBytes, countStyle: .file)) received · Total size unknown")
-                                    .font(.caption)
-                            }
-                        }
-                        .padding(10)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                        .padding(.horizontal, 12)
-                    }
                     HStack(spacing: 0) {
                         browserBarButton("chevron.left", label: "Back", disabled: !browserNavigation.canGoBack) { browserNavigation.back() }
                         browserBarButton("chevron.right", label: "Forward", disabled: !browserNavigation.canGoForward) { browserNavigation.forward() }
