@@ -916,6 +916,14 @@ struct MainView: View {
                         }
                         .disabled(store.busy)
                     }
+                    Section("About & Legal") {
+                        LabeledContent("Publisher", value: "Niimahz")
+                        Link("Terms of Use", destination: URL(string: "https://github.com/Niimahz/Anker_build/blob/main/TERMS.md")!)
+                        Link("Privacy Policy", destination: URL(string: "https://github.com/Niimahz/Anker_build/blob/main/PRIVACY.md")!)
+                        Link("Copyright & Licenses", destination: URL(string: "https://github.com/Niimahz/Anker_build/blob/main/LICENSE")!)
+                        Text("Only download and share content you have the right to use.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     Section("Activity") {
                         HStack(alignment: .top) {
                             Image(systemName: store.busy ? "hourglass" : "checkmark.circle")
