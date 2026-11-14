@@ -681,7 +681,138 @@ struct MainView: View {
         customWebsiteURL = candidate
         customNavigationVersion += 1
     }
+    private var gamesTab: some View {
+            NavigationStack {
+                List {
+                    Section {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "gamecontroller.fill")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                Text("ANKER")
+                                    .font(.caption.weight(.black))
+                                    .tracking(3)
+                                    .foregroundStyle(.white.opacity(0.85))
+                            }
+                            Text("Your game library")
+                                .font(.title2.weight(.bold))
+                                .foregroundStyle(.white)
+                            Text("\(store.games.count) prepared game\(store.games.count == 1 ? "" : "s") · Ready to inspect, organize and export")
+                                .font(.subheadline)
+                                .foregroundStyle(.white.opacity(0.83))
+                            Button {
+                                selectedTab = 1
+                            } label: {
+                                Label("Import another game", systemImage: "plus.circle.fill")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.white)
+                            .foregroundStyle(.indigo)
+                        }
+                        .padding(18)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            LinearGradient(colors: [.indigo, .blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing),
+                            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        )
+                    }
+                    .listRowBackground(Color.clear)
+                    if store.games.isEmpty {
+                        ContentUnavailableView("No games yet", systemImage: "gamecontroller",
+                            description: Text("Download or import an archive in Files, then extract it to My Games."))
+                    } else {
+                        Section("Prepared games") {
+                            ForEach(store.games, id: \.path) { folder in
+                                VStack(alignment: .leading, spacing: 12) {
+                                    NavigationLink {
+                                        GameDetailView(folder: folder)
+                                    } label: {
+                                        HStack(spacing: 14) {
+                                            AnkerGameArtwork(folder: folder)
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                Text(folder.lastPathComponent)
+                                                    .font(.headline)
+                                                    .lineLimit(2)
+                                                Label("Prepared locally", systemImage: "checkmark.seal.fill")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.green)
+                                                Text("Inspect · Launch plan · Export")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                        .padding(.vertical, 5)
+                                    }
+                                    HStack(spacing: 12) {
+                                        ShareLink(item: folder) {
+                                            Label("Export", systemImage: "square.and.arrow.up")
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .tint(.indigo)
+                                        Button(role: .destructive) {
+                                            pendingGameFolderDeletion = folder
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                        .buttonStyle(.bordered)
+                                    }
+                                }
+                                .padding(.vertical, 5)
+                            }
+                        }
+                    }
+                    Section("Artwork & rights") {
+                        Label("Add your own licensed cover.jpg or cover.png inside a game's folder to show its artwork.", systemImage: "photo")
+                            .font(.caption)
+                        Text("Anker does not download or redistribute game logos, covers, or game files.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .confirmationDialog("Delete extracted game folder?", isPresented: Binding(
+                    get: { pendingGameFolderDeletion != nil },
+                    set: { if !$0 { pendingGameFolderDeletion = nil } }
+                )) {
+                    Button("Delete extracted folder permanently", role: .destructive) {
+                        if let folder = pendingGameFolderDeletion {
+                            guard folder.deletingLastPathComponent().standardizedFileURL == store.library.standardizedFileURL else {
+                                store.status = "Cannot delete a folder outside My Games"
+                                pendingGameFolderDeletion = nil
+                                return
+                            }
+                            do {
+                                try FileManager.default.removeItem(at: folder)
+                                store.status = "Extracted game folder deleted"
+                                store.refresh()
+                            } catch {
+                                store.status = "Delete failed: " + error.localizedDescription
+                            }
+                        }
+                        pendingGameFolderDeletion = nil
+                    }
+                } message: {
+                    Text("This deletes the extracted game folder and all files inside it. The original downloaded archive, if present, is not deleted.")
+                }
+                .safeAreaInset(edge: .bottom) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Storage location (LiveContainer sandbox)")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text(store.storagePath).font(.caption2).textSelection(.enabled)
+                    }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .navigationTitle("My Games")
+                .refreshable { store.refresh() }
+            }.tabItem { Label("Games", systemImage: "gamecontroller") }.tag(2)
+    }
+
     var body: some View {
+        mainTabs
+    }
+
+    private var mainTabs: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
                 VStack(spacing: 0) {
@@ -1033,130 +1164,7 @@ struct MainView: View {
                     if case .success(let urls) = result, let url = urls.first { store.importItem(url) }
                 }
             }.tabItem { Label("Files", systemImage: "folder") }.tag(1)
-            NavigationStack {
-                List {
-                    Section {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: "gamecontroller.fill")
-                                    .font(.system(size: 28, weight: .bold))
-                                    .foregroundStyle(.white)
-                                Spacer()
-                                Text("ANKER")
-                                    .font(.caption.weight(.black))
-                                    .tracking(3)
-                                    .foregroundStyle(.white.opacity(0.85))
-                            }
-                            Text("Your game library")
-                                .font(.title2.weight(.bold))
-                                .foregroundStyle(.white)
-                            Text("\(store.games.count) prepared game\(store.games.count == 1 ? "" : "s") · Ready to inspect, organize and export")
-                                .font(.subheadline)
-                                .foregroundStyle(.white.opacity(0.83))
-                            Button {
-                                selectedTab = 1
-                            } label: {
-                                Label("Import another game", systemImage: "plus.circle.fill")
-                                    .font(.subheadline.weight(.semibold))
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.white)
-                            .foregroundStyle(.indigo)
-                        }
-                        .padding(18)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            LinearGradient(colors: [.indigo, .blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing),
-                            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        )
-                    }
-                    .listRowBackground(Color.clear)
-                    if store.games.isEmpty {
-                        ContentUnavailableView("No games yet", systemImage: "gamecontroller",
-                            description: Text("Download or import an archive in Files, then extract it to My Games."))
-                    } else {
-                        Section("Prepared games") {
-                            ForEach(store.games, id: \.path) { folder in
-                                VStack(alignment: .leading, spacing: 12) {
-                                    NavigationLink {
-                                        GameDetailView(folder: folder)
-                                    } label: {
-                                        HStack(spacing: 14) {
-                                            AnkerGameArtwork(folder: folder)
-                                            VStack(alignment: .leading, spacing: 6) {
-                                                Text(folder.lastPathComponent)
-                                                    .font(.headline)
-                                                    .lineLimit(2)
-                                                Label("Prepared locally", systemImage: "checkmark.seal.fill")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.green)
-                                                Text("Inspect · Launch plan · Export")
-                                                    .font(.caption2)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                        }
-                                        .padding(.vertical, 5)
-                                    }
-                                    HStack(spacing: 12) {
-                                        ShareLink(item: folder) {
-                                            Label("Export", systemImage: "square.and.arrow.up")
-                                        }
-                                        .buttonStyle(.borderedProminent)
-                                        .tint(.indigo)
-                                        Button(role: .destructive) {
-                                            pendingGameFolderDeletion = folder
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                        .buttonStyle(.bordered)
-                                    }
-                                }
-                                .padding(.vertical, 5)
-                            }
-                        }
-                    }
-                    Section("Artwork & rights") {
-                        Label("Add your own licensed cover.jpg or cover.png inside a game's folder to show its artwork.", systemImage: "photo")
-                            .font(.caption)
-                        Text("Anker does not download or redistribute game logos, covers, or game files.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .confirmationDialog("Delete extracted game folder?", isPresented: Binding(
-                    get: { pendingGameFolderDeletion != nil },
-                    set: { if !$0 { pendingGameFolderDeletion = nil } }
-                )) {
-                    Button("Delete extracted folder permanently", role: .destructive) {
-                        if let folder = pendingGameFolderDeletion {
-                            guard folder.deletingLastPathComponent().standardizedFileURL == store.library.standardizedFileURL else {
-                                store.status = "Cannot delete a folder outside My Games"
-                                pendingGameFolderDeletion = nil
-                                return
-                            }
-                            do {
-                                try FileManager.default.removeItem(at: folder)
-                                store.status = "Extracted game folder deleted"
-                                store.refresh()
-                            } catch {
-                                store.status = "Delete failed: " + error.localizedDescription
-                            }
-                        }
-                        pendingGameFolderDeletion = nil
-                    }
-                } message: {
-                    Text("This deletes the extracted game folder and all files inside it. The original downloaded archive, if present, is not deleted.")
-                }
-                .safeAreaInset(edge: .bottom) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Storage location (LiveContainer sandbox)")
-                            .font(.caption).foregroundStyle(.secondary)
-                        Text(store.storagePath).font(.caption2).textSelection(.enabled)
-                    }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .navigationTitle("My Games")
-                .refreshable { store.refresh() }
-            }.tabItem { Label("Games", systemImage: "gamecontroller") }.tag(2)
+            gamesTab
         }
         .alert("Delete downloaded archive?", isPresented: Binding(
             get: { store.extractedArchiveAwaitingDecision != nil },
