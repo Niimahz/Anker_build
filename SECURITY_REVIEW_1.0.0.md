@@ -23,3 +23,7 @@
 ## Release gate
 
 Do not publish the current draft as a security-reviewed production release. Required next work: enforce extraction quotas and path containment across all extractors, run malicious-archive tests, pin and audit dependency revisions, inventory XCFramework binaries and full license texts, verify actual release IPA, perform network/privacy review and rebuild. User-reported successful normal-use tests do not close these security findings.
+
+## Remediation progress (commit c974443f; not yet CI-verified)
+
+Added ZIPFoundation central-directory preflight for path traversal, symlinks/special entries, 50,000-entry and 4-GiB declared-size limits; added post-extraction symlink and 4-GiB/50,000-entry verification. **Limitations:** these checks do not enforce an extraction-time byte budget, cannot establish containment of the native RAR/7z extractor, and do not protect against archive entries with misleading size metadata. A clean rebuild, negative tests and review are required before declaring the fixes effective. Existing draft IPA does not contain these changes. Public release gate remains CLOSED.
