@@ -41,3 +41,9 @@ Anker 1.0.0 introduces an iOS browser, multi-download file manager, on-device ar
 ## User acceptance evidence — 2026-11-14
 
 The project owner reports successful iPhone functional testing of the current UI candidate, including downloading files, extracting ZIP/RAR/7z archives and transferring prepared files to Madeira. This is **user-reported acceptance**, not an independent automated test report. It does not establish low-storage, malicious-archive, backup/restore, privacy, or security coverage. Do not mark the full regression or security gates as passed on this basis alone.
+
+## Free open-source GitHub release staging
+
+The repository is public and the original code is MIT-licensed. The workflow `.github/workflows/prepare-release-draft.yml` can download a successful existing IPA build artifact, verify its ZIP structure, calculate a SHA-256 checksum and create a **draft** GitHub Release with release notes. The workflow deliberately does not publish the draft, sign the IPA, or assert that security/native-license audits have passed. It is manually triggered and must be run by an authorized repository maintainer.
+
+The project can use GitHub Issues at https://github.com/Niimahz/Anker_build/issues as its community support channel for GitHub-only distribution; do not imply that this substitutes for any platform-specific legal/privacy contact requirements.
