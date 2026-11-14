@@ -10,6 +10,38 @@ final class BrowserNavigationState: ObservableObject {
     @Published var canGoForward = false
     weak var webView: WKWebView?
     weak var popup: WKWebView?
+    @Published var browserDownloadProgress: Double = 0
+    @Published var browserDownloadActive = false
+    @Published var browserDownloadPaused = false
+    @Published var browserDownloadBytes: Int64 = 0
+    @Published var browserDownloadTotal: Int64 = -1
+    weak var activeDownload: WKDownload?
+    var downloadResumeData: Data?
+    var downloadObserver: NSKeyValueObservation?
+    func pauseBrowserDownload() {
+        guard let activeDownload else { return }
+        activeDownload.cancel { [weak self] data in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.downloadResumeData = data
+                self.browserDownloadActive = false
+                self.browserDownloadPaused = data != nil
+                self.activeDownload = nil
+                self.downloadObserver = nil
+            }
+        }
+    }
+    func resumeBrowserDownload() {
+        guard let data = downloadResumeData, let webView else { return }
+        downloadResumeData = nil
+        browserDownloadPaused = false
+        webView.resumeDownload(fromResumeData: data) { [weak self] download in
+            guard let self, let download else { return }
+            download.delegate = self.browserDownloadDelegate
+            self.browserDownloadDelegate?.observeDownload(download)
+        }
+    }
+    weak var browserDownloadDelegate: Browser.Coordinator?
     func back() {
         if let popup { popup.removeFromSuperview(); self.popup = nil; sync(webView ?? popup); return }
         webView?.goBack()
@@ -85,8 +117,22 @@ struct Browser: UIViewRepresentable {
         let pageChanged: (String) -> Void
         let navigation: BrowserNavigationState
         var adBlockEnabled = false
+        func observeDownload(_ download: WKDownload) {
+            navigation.activeDownload = download
+            navigation.browserDownloadActive = true
+            navigation.browserDownloadPaused = false
+            navigation.browserDownloadProgress = 0
+            navigation.downloadObserver = download.progress.observe(\.fractionCompleted, options: [.initial, .new]) { [weak navigation] progress, _ in
+                DispatchQueue.main.async {
+                    navigation?.browserDownloadProgress = progress.fractionCompleted
+                    navigation?.browserDownloadBytes = progress.completedUnitCount
+                    navigation?.browserDownloadTotal = progress.totalUnitCount
+                }
+            }
+        }
         init(fastDownload: @escaping (URL) -> Bool, pageChanged: @escaping (String) -> Void, navigation: BrowserNavigationState) {
             self.navigation = navigation
+            navigation.browserDownloadDelegate = self
             self.fastDownload = fastDownload
             self.pageChanged = pageChanged
         }
@@ -204,6 +250,7 @@ struct Browser: UIViewRepresentable {
         func webView(_ webView: WKWebView, navigationAction: WKNavigationAction,
                      didBecome download: WKDownload) {
             download.delegate = self
+            observeDownload(download)
             NotificationCenter.default.post(name: .gameBridgeBrowserDownloadStarted, object: nil)
         }
         func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse,
@@ -221,9 +268,20 @@ struct Browser: UIViewRepresentable {
             completionHandler(destination)
         }
         func downloadDidFinish(_ download: WKDownload) {
+            navigation.browserDownloadActive = false
+            navigation.activeDownload = nil
+            navigation.downloadObserver = nil
+            navigation.browserDownloadProgress = 1
             NotificationCenter.default.post(name: .gameBridgeBrowserDownloadFinished, object: nil)
         }
         func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
+            navigation.browserDownloadActive = false
+            navigation.activeDownload = nil
+            navigation.downloadObserver = nil
+            if let resumeData {
+                navigation.downloadResumeData = resumeData
+                navigation.browserDownloadPaused = true
+            }
             NotificationCenter.default.post(name: .gameBridgeBrowserDownloadFailed, object: error.localizedDescription)
         }
     }
@@ -687,8 +745,25 @@ struct MainView: View {
                         Label("Original archives stay in Files unless you choose to delete them after successful extraction. Prepared games remain in My Games.", systemImage: "externaldrive")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
-                    if !browserDownloadStatus.isEmpty {
-                        Section { Label(browserDownloadStatus, systemImage: "globe").font(.subheadline) }
+                    if !browserDownloadStatus.isEmpty || browserNavigation.browserDownloadActive || browserNavigation.browserDownloadPaused {
+                        Section("Browser download") {
+                            if !browserDownloadStatus.isEmpty {
+                                Text(browserDownloadStatus).font(.subheadline)
+                            }
+                            if browserNavigation.browserDownloadActive {
+                                if browserNavigation.browserDownloadTotal > 0 {
+                                    ProgressView(value: browserNavigation.browserDownloadProgress)
+                                    Text("\(Int(browserNavigation.browserDownloadProgress * 100))% · \(ByteCountFormatter.string(fromByteCount: browserNavigation.browserDownloadBytes, countStyle: .file)) / \(ByteCountFormatter.string(fromByteCount: browserNavigation.browserDownloadTotal, countStyle: .file))")
+                                        .font(.caption.monospacedDigit())
+                                } else {
+                                    ProgressView()
+                                    Text("Downloading · total size not reported").font(.caption)
+                                }
+                                Button("Pause browser download") { browserNavigation.pauseBrowserDownload() }
+                            } else if browserNavigation.browserDownloadPaused {
+                                Button("Resume browser download") { browserNavigation.resumeBrowserDownload() }
+                            }
+                        }
                     }
                     Section {
                         VStack(alignment: .leading, spacing: 12) {
