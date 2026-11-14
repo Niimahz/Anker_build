@@ -947,6 +947,27 @@ struct MainView: View {
                         }
                         .disabled(store.busy)
                     }
+                    if let donationURL = AnkerSupport.donationURL {
+                        Section("Support Anker") {
+                            Link(destination: donationURL) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "cup.and.saucer.fill")
+                                        .font(.title2)
+                                        .foregroundStyle(.orange)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text("Buy Me a Coffee").font(.headline)
+                                        Text("Optional donation · Anker stays free")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "arrow.up.right")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding(.vertical, 5)
+                            }
+                        }
+                    }
                     Section("About & Legal") {
                         LabeledContent("Publisher", value: "Niimahz")
                         Link("Terms of Use", destination: URL(string: "https://github.com/Niimahz/Anker_build/blob/main/TERMS.md")!)
