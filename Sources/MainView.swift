@@ -616,7 +616,6 @@ struct MainView: View {
     @State private var pendingGameFolderDeletion: URL?
     @State private var pendingQueueDeletion: UUID?
     @State private var selectedTab = 1
-    private let browserWebsiteNames = ["AnkerGames", "SteamUnlocked", "SteamRIP", "itch.io", "GOG", "Game Jolt", "IndieDB", "Custom Website"]
     private func browserBarButton(_ symbol: String, label: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
@@ -628,12 +627,11 @@ struct MainView: View {
     }
     @StateObject private var browserNavigation = BrowserNavigationState()
     @State private var browserAdBlockEnabled = true
-    @State private var selectedWebsite = 0
     @State private var customWebsiteInput = ""
-    @State private var customWebsiteURL = "https://example.com/"
+    @State private var customWebsiteURL = "https://www.google.com/"
     @State private var customWebsiteError = false
     @State private var customNavigationVersion = 0
-    @State private var currentBrowserPage = "https://steamunlocked.org/"
+    @State private var currentBrowserPage = "https://www.google.com/"
     private func addDownloadToQueue() {
         concurrent.add(directLink, mode: store.downloadMode)
         directLink = ""
@@ -656,80 +654,27 @@ struct MainView: View {
         TabView(selection: $selectedTab) {
             NavigationStack {
                 VStack(spacing: 0) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "gamecontroller.fill")
-                            .font(.title3)
-                            .foregroundStyle(.green)
-                            .frame(width: 38, height: 38)
-                            .background(.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("GAME LIBRARY")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .tracking(1.4)
-                                .foregroundStyle(.secondary)
-                            Menu {
-                                ForEach(0..<browserWebsiteNames.count, id: \.self) { index in
-                                    Button { selectedWebsite = index } label: {
-                                        if index == selectedWebsite {
-                                            Label(browserWebsiteNames[index], systemImage: "checkmark.circle.fill")
-                                        } else {
-                                            Text(browserWebsiteNames[index])
-                                        }
-                                    }
-                                }
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Text(browserWebsiteNames[selectedWebsite])
-                                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-                                .foregroundStyle(.primary)
-                            }
-                        }
-                        Spacer(minLength: 0)
-                        Image(systemName: "globe")
-                            .foregroundStyle(.secondary)
+                    HStack(spacing: 8) {
+                        Image(systemName: "globe").foregroundStyle(.green)
+                        TextField("Enter website address", text: $customWebsiteInput)
+                            .keyboardType(.URL)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .submitLabel(.go)
+                            .onSubmit { openCustomWebsite() }
+                        Button("Go") { openCustomWebsite() }
+                            .buttonStyle(.borderedProminent)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .padding(10)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
-                    .padding(.bottom, 6)
-                    if selectedWebsite == 7 {
-                        HStack(spacing: 8) {
-                            Image(systemName: "link").foregroundStyle(.secondary)
-                            TextField("Website URL", text: $customWebsiteInput)
-                                .keyboardType(.URL)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .submitLabel(.go)
-                                .onSubmit { openCustomWebsite() }
-                            Button("Go") { openCustomWebsite() }
-                                .buttonStyle(.borderedProminent)
-                                .tint(.green)
-                        }
-                        .padding(10)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                        .padding(.horizontal, 12)
-                        if customWebsiteError {
-                            Text("Enter a valid http:// or https:// website address.")
-                                .font(.caption)
-                                .foregroundStyle(.red)
-                        }
+                    if customWebsiteError {
+                        Text("Enter a valid HTTP or HTTPS website address.")
+                            .font(.caption).foregroundStyle(.red)
+                            .padding(.horizontal, 14)
                     }
-                    Browser(address: [
-                        "https://ankergames.net/",
-                        "https://steamunlocked.org/",
-                        "https://steamrip.cc/",
-                        "https://itch.io/games/platform-windows",
-                        "https://www.gog.com/",
-                        "https://gamejolt.com/games",
-                        "https://www.indiedb.com/games",
-                        customWebsiteURL
-                    ][selectedWebsite],
+                    Browser(address: customWebsiteURL,
                             currentPage: $currentBrowserPage,
                             navigation: browserNavigation,
                             adBlockEnabled: browserAdBlockEnabled,
@@ -738,7 +683,7 @@ struct MainView: View {
                                 store.download(url.absoluteString)
                                 return true
                             })
-                        .id("\(selectedWebsite)-\(selectedWebsite == 7 ? customNavigationVersion : 0)")
+                        .id(customNavigationVersion)
                     HStack(spacing: 0) {
                         browserBarButton("chevron.left", label: "Back", disabled: !browserNavigation.canGoBack) { browserNavigation.back() }
                         browserBarButton("chevron.right", label: "Forward", disabled: !browserNavigation.canGoForward) { browserNavigation.forward() }
@@ -771,7 +716,7 @@ struct MainView: View {
                     .background(.regularMaterial)
                     .overlay(alignment: .top) { Divider() }
                 }
-                .navigationTitle(["AnkerGames", "SteamUnlocked", "SteamRIP", "itch.io", "GOG", "Game Jolt", "IndieDB", "Custom Website"][selectedWebsite])
+                .navigationTitle("Web Browser")
                 .navigationBarTitleDisplayMode(.inline)
             }
             .onReceive(NotificationCenter.default.publisher(for: .gameBridgeBrowserDownloadStarted)) { _ in
