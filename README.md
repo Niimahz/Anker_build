@@ -15,6 +15,14 @@
 
 Anker is an independent iOS utility designed to prepare **already-installed PC games** for manual import into **Madeira** on iOS. It helps transfer, extract, inspect, and organize existing Windows game folders into a format and folder structure suitable for importing into Madeira. Anker also includes a general-purpose WebKit browser and download manager.
 
+### Powerful on-device archive extraction
+
+Extract large PC game archives **directly on your iPhone — no PC required for extraction**. Anker supports ZIP, RAR/RAR5, 7z and other supported archive formats, with live extraction activity details. Extraction success depends on archive integrity, format support, and sufficient free storage.
+
+### BAT/CMD script inspection
+
+Anker **reads and analyzes Windows BAT/CMD scripts** in prepared game folders, showing their commands and helping you understand game setup and launch requirements. It also identifies Windows executables to help you select files when importing into Madeira. **BAT/CMD scripts are not executed, and Anker does not automatically apply their instructions or modify files based on them.**
+
 ### Already have a PC game folder?
 
 Anker makes it easier to prepare, extract, organize, and transfer compatible Windows game files for use with Madeira on iOS — including supported portable game distributions and pre-installed game backups.
@@ -35,9 +43,9 @@ Anker does not provide games or bypass licensing requirements. Users are respons
 | 🌐 Web browser | Navigate to user-entered HTTP/HTTPS websites using WebKit |
 | ⬇️ Downloads | Direct downloads and a managed download queue |
 | ⏯️ Controls | Progress information and pause/resume where supported |
-| 📦 Archives | ZIP, RAR, 7z and selected TAR/GZIP formats |
+| 📦 Powerful on-device extractor | Extract large supported ZIP, RAR/RAR5, 7z and selected TAR/GZIP archives on iPhone without a PC; available storage and format support required |
 | 🗂️ Local library | Inspect, share, and delete extracted folders |
-| 🔎 File inspection | Identify Windows executables and inspect BAT/CMD scripts without running them |
+| 🔎 BAT/CMD analysis | Read and classify batch-script commands and identify Windows executables; scripts are not executed or automatically applied |
 | 🛡️ Ad blocking | Optional built-in content filtering |
 
 ## Installation
