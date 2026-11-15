@@ -4,6 +4,44 @@ import UniformTypeIdentifiers
 import ZIPFoundation
 import LibArchive
 
+// Native document picker provides explicit selection and cancellation callbacks.
+struct AnkerDocumentPicker: UIViewControllerRepresentable {
+    let onSelection: (URL) -> Void
+    let onCancel: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSelection: onSelection, onCancel: onCancel)
+    }
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.item, .folder], asCopy: false)
+        picker.allowsMultipleSelection = false
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ controller: UIDocumentPickerViewController, context: Context) {}
+
+    final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let onSelection: (URL) -> Void
+        let onCancel: () -> Void
+
+        init(onSelection: @escaping (URL) -> Void, onCancel: @escaping () -> Void) {
+            self.onSelection = onSelection
+            self.onCancel = onCancel
+        }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else { onCancel(); return }
+            onSelection(url)
+        }
+
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            onCancel()
+        }
+    }
+}
+
 final class BrowserNavigationState: ObservableObject {
     @Published var verificationDiagnostic = "Not inspected yet"
     @Published var canGoBack = false
@@ -1209,17 +1247,14 @@ struct MainView: View {
                     }
                 }
                 .refreshable { store.refresh() }
-                .fileImporter(isPresented: $showImporter, allowedContentTypes: [.item, .data, .content, .archive, .zip, .folder], allowsMultipleSelection: false) { result in
-                    switch result {
-                    case .success(let urls):
-                        guard let url = urls.first else {
-                            store.status = "No file or folder was selected."
-                            return
-                        }
-                        store.importItem(url)
-                    case .failure(let error):
-                        store.status = "Import failed: \(error.localizedDescription)"
-                    }
+                .sheet(isPresented: $showImporter) {
+                    AnkerDocumentPicker(
+                        onSelection: { url in
+                            store.importItem(url)
+                            showImporter = false
+                        },
+                        onCancel: { showImporter = false }
+                    )
                 }
             }.tabItem { Label("Files", systemImage: "folder") }.tag(1)
             gamesTab
