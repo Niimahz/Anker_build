@@ -1,0 +1,45 @@
+name: Publish tested Anker v1.0.0 final IPA
+on:
+  push:
+    paths:
+      - .github/workflows/publish-tested-final.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - name: Verify tested build source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          SOURCE_SHA=4fe96ee9000cf930078764a56f838934856803aa
+          RUN_ID=43668700500
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq .head_sha)" = "$SOURCE_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq .conclusion)" = success
+          test "$(git cat-file -t "$SOURCE_SHA")" = commit
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name AnkerGameBridge-unsigned-IPA --dir dist
+          test -f dist/AnkerGameBridge-unsigned.ipa
+          unzip -t dist/AnkerGameBridge-unsigned.ipa >/dev/null
+          mv dist/AnkerGameBridge-unsigned.ipa dist/Anker-v1.0.0-unsigned.ipa
+          (cd dist && sha256sum Anker-v1.0.0-unsigned.ipa > SHA256SUMS.txt)
+      - name: Update published final release with tested IPA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh release view v1.0.0 --json isDraft,isPrerelease --jq '[.isDraft,.isPrerelease] | join(",")')" = false,false
+          gh release upload v1.0.0 dist/Anker-v1.0.0-unsigned.ipa dist/SHA256SUMS.txt --clobber
+          gh release edit v1.0.0 --title "Anker 1.0.0 — Final Release" --latest
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f v1.0.0 4fe96ee9000cf930078764a56f838934856803aa
+          git push origin refs/tags/v1.0.0 --force
+          echo "Published tested IPA from build 43668700500, commit 4fe96ee9000cf930078764a56f838934856803aa"
