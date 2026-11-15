@@ -681,7 +681,7 @@ struct MainView: View {
     @StateObject private var store = GameStore()
     @StateObject private var concurrent = ConcurrentDownloads()
     @State private var showImporter = false
-    @State private var showFolderImporter = false
+
     @State private var showOtherFileImporter = false
     @State private var directLink = ""
     @State private var browserDownloadStatus = ""
@@ -1188,9 +1188,6 @@ struct MainView: View {
                         Button { showImporter = true } label: {
                             Label("Import ZIP / archive from Files", systemImage: "archivebox")
                         }
-                        Button { showFolderImporter = true } label: {
-                            Label("Import game folder from Files", systemImage: "folder.badge.plus")
-                        }
                         Button { showOtherFileImporter = true } label: {
                             Label("Import other file from Files", systemImage: "doc.badge.plus")
                         }
@@ -1266,17 +1263,6 @@ struct MainView: View {
                             showImporter = false
                         },
                         onCancel: { showImporter = false }
-                    )
-                }
-                .sheet(isPresented: $showFolderImporter) {
-                    AnkerDocumentPicker(
-                        contentTypes: [.folder],
-                        copyToApp: false,
-                        onSelection: { url in
-                            store.importItem(url)
-                            showFolderImporter = false
-                        },
-                        onCancel: { showFolderImporter = false }
                     )
                 }
                 .sheet(isPresented: $showOtherFileImporter) {
