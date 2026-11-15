@@ -6,6 +6,8 @@ import LibArchive
 
 // Native document picker provides explicit selection and cancellation callbacks.
 struct AnkerDocumentPicker: UIViewControllerRepresentable {
+    let contentTypes: [UTType]
+    let copyToApp: Bool
     let onSelection: (URL) -> Void
     let onCancel: () -> Void
 
@@ -14,7 +16,7 @@ struct AnkerDocumentPicker: UIViewControllerRepresentable {
     }
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.item, .folder], asCopy: false)
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: contentTypes, asCopy: copyToApp)
         picker.allowsMultipleSelection = false
         picker.delegate = context.coordinator
         return picker
@@ -679,6 +681,8 @@ struct MainView: View {
     @StateObject private var store = GameStore()
     @StateObject private var concurrent = ConcurrentDownloads()
     @State private var showImporter = false
+    @State private var showFolderImporter = false
+    @State private var showOtherFileImporter = false
     @State private var directLink = ""
     @State private var browserDownloadStatus = ""
     @State private var pendingArchiveDeletion: URL?
@@ -1182,7 +1186,13 @@ struct MainView: View {
                     }
                     Section {
                         Button { showImporter = true } label: {
-                            Label("Import archive or folder from Files", systemImage: "plus.circle.fill")
+                            Label("Import ZIP / archive from Files", systemImage: "archivebox")
+                        }
+                        Button { showFolderImporter = true } label: {
+                            Label("Import game folder from Files", systemImage: "folder.badge.plus")
+                        }
+                        Button { showOtherFileImporter = true } label: {
+                            Label("Import other file from Files", systemImage: "doc.badge.plus")
                         }
                         .disabled(store.busy)
                     }
@@ -1249,11 +1259,35 @@ struct MainView: View {
                 .refreshable { store.refresh() }
                 .sheet(isPresented: $showImporter) {
                     AnkerDocumentPicker(
+                        contentTypes: [.zip, .archive],
+                        copyToApp: true,
                         onSelection: { url in
                             store.importItem(url)
                             showImporter = false
                         },
                         onCancel: { showImporter = false }
+                    )
+                }
+                .sheet(isPresented: $showFolderImporter) {
+                    AnkerDocumentPicker(
+                        contentTypes: [.folder],
+                        copyToApp: false,
+                        onSelection: { url in
+                            store.importItem(url)
+                            showFolderImporter = false
+                        },
+                        onCancel: { showFolderImporter = false }
+                    )
+                }
+                .sheet(isPresented: $showOtherFileImporter) {
+                    AnkerDocumentPicker(
+                        contentTypes: [.item],
+                        copyToApp: true,
+                        onSelection: { url in
+                            store.importItem(url)
+                            showOtherFileImporter = false
+                        },
+                        onCancel: { showOtherFileImporter = false }
                     )
                 }
             }.tabItem { Label("Files", systemImage: "folder") }.tag(1)
